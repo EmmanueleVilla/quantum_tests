@@ -190,7 +190,6 @@ feature_map = ZFeatureMap(12, reps=3)
 
 print(feature_map.decompose().draw(output='text'))
 
-
 ansatz = QuantumCircuit(12, name="Ansatz")
 
 # Primo layer conv
@@ -230,8 +229,9 @@ print(circuit.draw("text"))
 
 evals = []
 
+
 def callback_graph(weights, obj_func_eval):
-    file1 = open("evals_3x4.txt", "a")  # append mode
+    file1 = open("evals_3x4_tris.txt", "a")  # append mode
     file1.write(f"{(obj_func_eval, weights)}\n")
     file1.close()
     print(f"{len(evals)}: {obj_func_eval}")
@@ -242,7 +242,26 @@ def callback_graph(weights, obj_func_eval):
 classifier = NeuralNetworkClassifier(
     qnn,
     optimizer=COBYLA(maxiter=500),
-    callback=callback_graph
+    callback=callback_graph,
+    initial_point=np.asarray([1.27064292, 2.61018003, -0.47947082, -0.60738082, 1.91328623,
+                              0.22036551, 1.61988201, -0.07033579, 0.31777624, 0.48497491,
+                              1.93012018, 1.87450889, 0.549721, 0.95112017, 1.78042076,
+                              0.7156498, 0.55834894, -0.07949216, 0.24702047, -0.67569431,
+                              0.13208899, 0.75533422, 1.3807458, 1.08476047, 1.13884424,
+                              0.88906048, 1.94662547, 0.60971719, 1.21687353, 1.80589386,
+                              0.24414676, 2.15046887, 1.27385686, 0.73926129, 0.7994231,
+                              1.07054305, 0.05457145, 0.21296875, 0.64625133, 1.13391918,
+                              0.3017727, 0.38691495, 0.39963795, 0.14534036, 0.93284535,
+                              0.26736202, 0.66638345, 0.3812351, 1.60834314, 0.51728569,
+                              0.54728729, -0.06282937, 0.83521811, 1.75794234, 0.74362506,
+                              1.98089204, -0.01363582, 3.39511356, 2.84853282, 0.04239397,
+                              0.74984005, 0.65804738, 1.5322064, 1.44186317, 0.83262495,
+                              -0.49141423, 0.17698202, 1.89116927, 0.12434442, 0.39488832,
+                              1.46936042, 1.56682383, 0.59999737, 0.6824158, 0.31674721,
+                              -0.12303113, -0.55887718, 0.45404216, 0.63465966, -0.08277109,
+                              1.62445826, 0.61073897, 0.26145269, 0.36570487, 0.00777991,
+                              0.81025927, 0.44817945, 0.57228284, 0.9851257, 0.66710358,
+                              1.90950484, 0.04089439, 1.56446648])
 )
 
 x = np.asarray(train_features)
@@ -358,13 +377,13 @@ qc.barrier()
 
 qc.measure(range(9), range(9))
 
-#print(qc.draw("text"))
+# print(qc.draw("text"))
 
 sim = Aer.get_backend('qasm_simulator')
 job = execute(qc, sim, shots=1024)
 result = job.result()
 counts = result.get_counts(qc)
-#print(counts)
+# print(counts)
 
 n_valid = 0
 n_invalid = 0
@@ -395,4 +414,4 @@ for count in counts:
         n_invalid += 1 * counts[count]
         pass
 
-#print(f"Valid: {n_valid}, Invalid: {n_invalid}, Ratio: {n_valid / (n_valid + n_invalid)}")
+# print(f"Valid: {n_valid}, Invalid: {n_invalid}, Ratio: {n_valid / (n_valid + n_invalid)}")
