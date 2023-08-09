@@ -1,6 +1,8 @@
 import threading
 
 import numpy as np
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from qiskit import transpile, QuantumCircuit, Aer
 
 from build_circuit import build_circuit
@@ -21,7 +23,36 @@ class OptimizationApp:
         self.stop_button = tk.Button(root, text="Stop Optimization", command=self.stop_optimization)
         self.stop_button.pack()
 
-        self.root.geometry("800x600")
+        self.root.geometry("800x800")
+
+        # Creazione dei grafici
+        self.figure_theta = Figure(figsize=(5, 4), dpi=100)
+        self.plot_theta = self.figure_theta.add_subplot(1, 1, 1)
+        self.canvas_theta = FigureCanvasTkAgg(self.figure_theta, master=root)
+        self.canvas_widget_theta = self.canvas_theta.get_tk_widget()
+        self.canvas_widget_theta.pack()
+
+        self.figure_fitness = Figure(figsize=(5, 4), dpi=100)
+        self.plot_fitness = self.figure_fitness.add_subplot(1, 1, 1)
+        self.canvas_fitness = FigureCanvasTkAgg(self.figure_fitness, master=root)
+        self.canvas_widget_fitness = self.canvas_fitness.get_tk_widget()
+        self.canvas_widget_fitness.pack()
+
+    def update_theta_plot(self, theta_values):
+        self.plot_theta.clear()
+        self.plot_theta.scatter(range(len(theta_values)), theta_values, marker='o')
+        self.plot_theta.set_title("Theta Values")
+        self.plot_theta.set_xlabel("Theta Index")
+        self.plot_theta.set_ylabel("Theta Value")
+        self.canvas_theta.draw()
+
+    def update_fitness_plot(self, fitness_values):
+        self.plot_fitness.clear()
+        self.plot_fitness.plot(fitness_values)
+        self.plot_fitness.set_title("Fitness Values")
+        self.plot_fitness.set_xlabel("Iteration")
+        self.plot_fitness.set_ylabel("Fitness Value")
+        self.canvas_fitness.draw()
 
     # Modificare la funzione inizializzando la sovrapposizione di stati = a training set
     def fitness_function(self, theta, features, labels):
@@ -81,7 +112,7 @@ class OptimizationApp:
         fitness = self.fitness_function(individual, features_graph, train_labels)
         failed_attempts = 0
         offset = 0.005
-
+        fitness_values = []
         while self.optimization_running:
             found = False
             for i in range(len(individual)):
@@ -89,8 +120,13 @@ class OptimizationApp:
                     return
                 old = individual[i]
                 individual[i] += np.random.uniform(-1 * offset, offset)
+
                 new_fitness = self.fitness_function(individual, features_graph, train_labels)
-                print(f"New fitness: {new_fitness}")
+                fitness_values.append(new_fitness)
+
+                self.update_theta_plot(individual)
+                self.update_fitness_plot(fitness_values)
+
                 if new_fitness > fitness:
                     fitness = new_fitness
                     self.save_individual(individual, "optimization_4x3.txt")
