@@ -2,8 +2,6 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 
-from main import conv_circuit
-
 
 def conv_circuit(thetas):
     target = QuantumCircuit(2)
