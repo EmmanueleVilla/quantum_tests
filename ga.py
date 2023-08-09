@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import numpy as np
 from qiskit import Aer, QuantumCircuit, transpile, assemble
 from tqdm import tqdm
@@ -5,12 +7,11 @@ from tqdm import tqdm
 from build_circuit import build_circuit
 from dataset import create_dataset
 
-
 if __name__ == "__main__":
     def initialize_population(pop_size, num_theta):
         population = []
         for _ in range(pop_size):
-            individual = np.random.uniform(0, np.pi, num_theta)
+            individual = np.random.uniform(0, np.pi / 4, num_theta)
             population.append(individual)
         return population
 
@@ -23,35 +24,47 @@ if __name__ == "__main__":
         backend = Aer.get_backend('qasm_simulator')
 
         accurate_predictions = 0
-        total_samples = len(features)
 
-        for feature, label in zip(features, labels):
-            qc = QuantumCircuit(12, 1)
+        qc = QuantumCircuit(13, 13)
 
-            for i, val in enumerate(feature):
-                if val == 1:
-                    qc.x(i)
+        qnn = create_circuit()
+        qnn.assign_parameters(theta, inplace=True)
 
-            qc = qc.compose(create_circuit())
+        qc = qc.compose(qnn.copy("QNN"))
+        qc.barrier()
+        qc.cx(11, 12)
+        qc.barrier()
+        qc = qc.compose(qnn.copy("Inv QNN").inverse())
+        qc.barrier()
+        qc.measure(range(12), range(12))
+        qc.measure(12, 12)
 
-            qc.measure(11, 0)
-            qc.assign_parameters(theta, inplace=True)
+        transpiled_circuit = transpile(qc, backend)
+        results = backend.run(transpiled_circuit, shots=100000).result()
+        counts = results.get_counts()
 
-            transpiled_circuit = transpile(qc, backend)
-            results = backend.run(transpiled_circuit, shots=1).result()
-            counts = results.get_counts()
+        ordered_count = sorted(counts.items(), key=lambda x: x[1], reverse=True)
 
-            if '1' in counts:
-                predicted_label = 1
-            else:
-                predicted_label = 0
+        tot = 0
 
-            if predicted_label == label:
-                accurate_predictions += 1
+        for i in range(0, len(features)):
+            feature = features[i]
+            label = labels[i]
 
-        accuracy = accurate_predictions / total_samples
-        loss = 1 - accuracy
-        return accuracy, loss
+            for count in ordered_count:
+                graph = count[0][0:12]
+                prediction = count[0][12]
+
+                if graph == feature:
+                    tot += 1
+                    if str(label) == "1" and prediction == "1":
+                        accurate_predictions += 1
+                    if str(label) == "-1" and prediction == "0":
+                        accurate_predictions += 1
+                    break
+
+        accuracy = accurate_predictions / tot
+        return accuracy
 
 
     def tournament_selection(population, fitness_scores, tournament_size):
@@ -72,10 +85,7 @@ if __name__ == "__main__":
     def mutation(child, mutation_rate):
         for i in range(len(child)):
             if np.random.random() < mutation_rate:
-                if np.random.random() < 0.5:
-                    child[i] += np.random.uniform(-0.1, 0.1)
-                else:
-                    child[i] = np.random.uniform(0, np.pi)
+                child[i] += np.random.uniform(-0.05, 0.05)
         return child
 
 
@@ -96,22 +106,27 @@ if __name__ == "__main__":
 
     def main():
 
-        population_size = 25
+        population_size = 50
         num_theta = 93
         generations = 50
         mutation_rate = 0.1
-        tournament_size = 4
+        tournament_size = 8
 
-        train_features, train_labels, test_features, test_labels = create_dataset()
+        train_features, train_labels, test_features, test_labels = create_dataset(100)
 
         population = initialize_population(population_size, num_theta)
 
         fitness_scores = np.zeros(len(population))
 
+        # Print the starting time and hour
+        print("Starting time:", datetime.now().time())
+
+        features_graph = [''.join(str(x) for x in row) for row in train_features]
+
         for generation in tqdm(range(generations), desc="Generations", unit="generation"):
-            fitness_scores = [fitness_function(individual, train_features, train_labels) for individual in population]
+            fitness_scores = [fitness_function(individual, features_graph, train_labels) for individual in population]
             # print the max fitness value
-            print("Generazione:", generation, "Punteggio di fitness massimo:", max(fitness_scores))
+            print("\nMax fitness:", max(fitness_scores))
             new_population = []
 
             for _ in range(population_size):

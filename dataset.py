@@ -11,12 +11,12 @@ def generate_grid_graph():
     return graph
 
 
-def create_dataset():
+def create_dataset(size):
     valid = []
     invalid = []
 
     no = 0
-    while len(valid) < 250 or len(invalid) < 250:
+    while len(valid) < size or len(invalid) < size:
         try:
             new_graph = generate_grid_graph()
 
@@ -49,7 +49,7 @@ def create_dataset():
         arr = [new_graph.nodes[node]['label'] for node in new_graph.nodes]
         invalid_data.append((arr, -1))
 
-    invalid_data = invalid_data[:250]
+    invalid_data = invalid_data[:size]
 
     all_samples = valid_data + invalid_data
     random.shuffle(all_samples)

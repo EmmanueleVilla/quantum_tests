@@ -34,7 +34,29 @@ The Quantum Neural Network used for the tests is the basic QNN offered by Qiskit
 - Train a Quantum Variational Auto-encoder to generate the maps
 - TODO
 
-### Results
+### Tests
+
+#### Test 1
 A basic QCNN with a ZZFeatureMap, incorporating conv+pool layers, consisting of 63 parameters was trained for 100 cycles (45 minutes) on a 3x3 graph dataset. It achieved 67% accuracy on the training data and 74% accuracy on the test data.
 
+#### Test 2
 Another basic QCNN with a ZZFeatureMap, accompanied by conv+pool layers, containing 93 parameters, was trained for 1250 cycles (5 hours) on a 3x4 graph dataset. It reached an accuracy of 80% on the training data and 72% on the test data.
+
+#### Test 3
+A QCNN oracle trained with genetic algorithms with no feature map.
+Gens: 50, population: 25, tournament size: 4, mutation rate: 0.1, mutation type: offset 0.1 and reset.
+Start values between 0 and pi.
+Start accuracy: 57%.
+End accuracy: 58% lol
+(12 sec per generation)
+
+#### Test 4
+A QCNN oracle trained with genetic algorithms with no feature map.
+Gens: 50, population: 50, tournament size: 8, mutation rate: 0.1, mutation type: offset 0.05.
+Start values between 0 and pi/4.
+Start accuracy: 59%.
+End accuracy: 56%, but it was 64% at some point, I swear.
+(25 sec per generation)
+
+#### Test 5
+A custom optimizer that changes the theta values using backtracking to search for a local optima... TODO
