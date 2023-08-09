@@ -144,6 +144,9 @@ class OptimizationApp:
                 if new_fitness > fitness:
                     fitness = new_fitness
                     self.save_individual(individual, "optimization_4x3.txt")
+
+                    # Try again to edit the same theta since it was successful
+                    i -= 1
                     found = True
                 else:
                     individual[i] = old
