@@ -10,7 +10,7 @@ if __name__ == "__main__":
     def initialize_population(pop_size, num_theta):
         population = []
         for _ in range(pop_size):
-            individual = np.random.uniform(-2 * np.pi, 2 * np.pi, num_theta)
+            individual = np.random.uniform(0, np.pi, num_theta)
             population.append(individual)
         return population
 
@@ -75,7 +75,7 @@ if __name__ == "__main__":
                 if np.random.random() < 0.5:
                     child[i] += np.random.uniform(-0.1, 0.1)
                 else:
-                    child[i] = np.random.uniform(-2 * np.pi, 2 * np.pi)
+                    child[i] = np.random.uniform(0, np.pi)
         return child
 
 
