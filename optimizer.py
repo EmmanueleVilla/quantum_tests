@@ -25,34 +25,47 @@ class OptimizationApp:
 
         self.root.geometry("800x800")
 
+        # Creazione del frame per i grafici
+        self.graph_frame = tk.Frame(root)
+        self.graph_frame.pack()
+
         # Creazione dei grafici
-        self.figure_theta = Figure(figsize=(5, 4), dpi=100)
-        self.plot_theta = self.figure_theta.add_subplot(1, 1, 1)
-        self.canvas_theta = FigureCanvasTkAgg(self.figure_theta, master=root)
-        self.canvas_widget_theta = self.canvas_theta.get_tk_widget()
-        self.canvas_widget_theta.pack()
+        self.figure = Figure(figsize=(10, 4), dpi=100)
 
-        self.figure_fitness = Figure(figsize=(5, 4), dpi=100)
-        self.plot_fitness = self.figure_fitness.add_subplot(1, 1, 1)
-        self.canvas_fitness = FigureCanvasTkAgg(self.figure_fitness, master=root)
-        self.canvas_widget_fitness = self.canvas_fitness.get_tk_widget()
-        self.canvas_widget_fitness.pack()
+        self.plot_theta = self.figure.add_subplot(1, 2, 1)
+        self.plot_fitness = self.figure.add_subplot(1, 2, 2)
 
-    def update_theta_plot(self, theta_values):
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.graph_frame)
+        self.canvas_widget = self.canvas.get_tk_widget()
+        self.canvas_widget.pack()
+
+        # Creazione del frame per il testo
+        self.text_frame = tk.Frame(root)
+        self.text_frame.pack()
+
+        # Creazione del widget di testo con testo bianco
+        self.text_view = tk.Text(self.text_frame, height=10, width=100, fg="white")
+        self.text_view.pack()
+
+    def update_text_view(self, failed_attempts, fitness, offset):
+        self.text_view.delete("1.0", tk.END)
+        self.text_view.insert(tk.END, f"Failed Attempts: {failed_attempts}\n")
+        self.text_view.insert(tk.END, f"Fitness: {fitness}\n")
+        self.text_view.insert(tk.END, f"Offset: {offset}\n")
+
+    def update_graphs(self, theta_data, fitness_data, max_fitness_values):
         self.plot_theta.clear()
-        self.plot_theta.scatter(range(len(theta_values)), theta_values, marker='o')
-        self.plot_theta.set_title("Theta Values")
-        self.plot_theta.set_xlabel("Theta Index")
-        self.plot_theta.set_ylabel("Theta Value")
-        self.canvas_theta.draw()
-
-    def update_fitness_plot(self, fitness_values):
         self.plot_fitness.clear()
-        self.plot_fitness.plot(fitness_values)
-        self.plot_fitness.set_title("Fitness Values")
-        self.plot_fitness.set_xlabel("Iteration")
-        self.plot_fitness.set_ylabel("Fitness Value")
-        self.canvas_fitness.draw()
+
+        self.plot_theta.scatter(range(len(theta_data)), theta_data, marker='o')
+        self.plot_theta.set_title("Theta Values")
+
+        self.plot_fitness.plot(range(len(fitness_data)), fitness_data)
+        self.plot_fitness.plot(range(len(fitness_data)), max_fitness_values)
+        self.plot_fitness.set_title("Fitness Trend")
+
+        self.canvas.draw()
+
 
     # Modificare la funzione inizializzando la sovrapposizione di stati = a training set
     def fitness_function(self, theta, features, labels):
@@ -105,27 +118,28 @@ class OptimizationApp:
 
         num_theta = 93
 
-        individual = np.random.uniform(0, np.pi / 4, num_theta)
+        individual = np.random.normal(0, np.pi / 10, num_theta)
         train_features, train_labels, test_features, test_labels = create_dataset(100)
         features_graph = [''.join(str(x) for x in row) for row in train_features]
 
         fitness = self.fitness_function(individual, features_graph, train_labels)
         failed_attempts = 0
-        offset = 0.005
+        offset = 0.001
         fitness_values = []
+        max_fitness_values = []
         while self.optimization_running:
             found = False
             for i in range(len(individual)):
                 if not self.optimization_running:
                     return
+                self.update_graphs(individual, fitness_values, max_fitness_values)
+                self.update_text_view(failed_attempts, fitness, offset)
+
                 old = individual[i]
                 individual[i] += np.random.uniform(-1 * offset, offset)
 
                 new_fitness = self.fitness_function(individual, features_graph, train_labels)
                 fitness_values.append(new_fitness)
-
-                self.update_theta_plot(individual)
-                self.update_fitness_plot(fitness_values)
 
                 if new_fitness > fitness:
                     fitness = new_fitness
@@ -134,15 +148,14 @@ class OptimizationApp:
                 else:
                     individual[i] = old
 
+                max_fitness_values.append(fitness)
+
             if found:
                 failed_attempts = 0
-                offset = 0.005
+                offset = 0.001
             else:
-                failed_attempts += 1
-
-            if failed_attempts >= 10:
-                offset *= 1.5
-                offset = max(offset, 0.05)
+                offset += 0.001
+                offset = min(offset, 0.05)
 
     def start_optimization_thread(self):
         if not self.optimization_running:
