@@ -35,6 +35,6 @@ The Quantum Neural Network used for the tests is the basic QNN offered by Qiskit
 - TODO
 
 ### Results
-A QCNN with a ZZFeatureMap, incorporating conv+pool layers, consisting of 63 parameters was trained for 100 cycles (45 minutes) on a 3x3 graph dataset. It achieved approximately 67% accuracy on the training data and 74% accuracy on the test data.
+A basic QCNN with a ZZFeatureMap, incorporating conv+pool layers, consisting of 63 parameters was trained for 100 cycles (45 minutes) on a 3x3 graph dataset. It achieved 67% accuracy on the training data and 74% accuracy on the test data.
 
-Another QCNN with a ZZFeatureMap, accompanied by conv+pool layers, containing 93 parameters, was trained for 1250 cycles (5 hours) on a 3x4 graph dataset. It reached an accuracy of [TRAIN_ACC] on the training data and [TEST_ACC] on the test data.
+Another basic QCNN with a ZZFeatureMap, accompanied by conv+pool layers, containing 93 parameters, was trained for 1250 cycles (5 hours) on a 3x4 graph dataset. It reached an accuracy of 80% on the training data and 72% on the test data.
