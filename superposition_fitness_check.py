@@ -130,9 +130,8 @@ def eval_circuit(qc):
     simulator = Aer.get_backend('qasm_simulator')
     result = simulator.run(transpile(meas, simulator), shots=1024).result()
     counts = result.get_counts()
-    results = sorted([x[1:] for x in list(counts.keys())])
-    print("Results:\t", results)
-    return results
+    results = [x[1:] for x in list(counts.keys())]
+    return sorted([x[::-1] for x in results])
 
 
 def eval_fitness(qc, individual, features_graph, train_labels):
@@ -141,7 +140,7 @@ def eval_fitness(qc, individual, features_graph, train_labels):
     print("Graphs:\t\t", list(sort(features_graph)))
     meas = qc.copy()
 
-    eval_circuit(meas)
+    print("base qc:\t", eval_circuit(meas))
 
     ansatz = create_ansatz()
     ansatz = ansatz.bind_parameters(individual)
