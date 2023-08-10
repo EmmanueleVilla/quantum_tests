@@ -131,50 +131,37 @@ def eval_circuit(qc):
     result = simulator.run(transpile(meas, simulator), shots=1024).result()
     counts = result.get_counts()
     results = [x[1:] for x in list(counts.keys())]
-    return sorted([x[::-1] for x in results])
+    return sorted([(x[::-1], x[0]) for x in results])
 
 
 def eval_fitness(qc, individual, features_graph, train_labels):
     fitness = 0
-
-    print("Graphs:\t\t", list(sort(features_graph)))
+    target = list(zip(features_graph, [str(x) for x in train_labels]))
+    target.sort(key=lambda x: x[0])
+    print("Graphs:\t\t", target)
     meas = qc.copy()
 
-    print("base qc:\t", eval_circuit(meas))
+    # print("base qc:\t", eval_circuit(meas))
 
     ansatz = create_ansatz()
     ansatz = ansatz.bind_parameters(individual)
 
     meas.compose(ansatz.copy(), range(4), inplace=True)
 
-    print("conv qc:\t", eval_circuit(meas))
+    # print("conv qc:\t", eval_circuit(meas))
     meas.cx(4, 3)
 
     meas.compose(ansatz.copy().inverse(), range(4), inplace=True)
 
-    print("conv qc:\t", eval_circuit(meas))
+    result = eval_circuit(meas)
+    print("oracle qc:\t", result)
 
-    #print(meas.draw(output="text"))
+    return len(intersection(result, target))
 
-    eval_circuit(meas)
-    return
-    # print(meas.decompose().draw("text"))
-    meas.measure(range(5), range(5))
 
-    simulator = Aer.get_backend('qasm_simulator')
-    result = simulator.run(transpile(meas, simulator), shots=1024).result()
-    counts = result.get_counts(meas)
-
-    for count in counts:
-        graph = count[:4]
-        label = count[4]
-        # find the corresponding feature index
-        feature_idx = features_graph.index(graph)
-        # check if the label is correct
-        if label == train_labels[feature_idx]:
-            fitness += counts[count]
-
-    print(fitness)
+def intersection(lst1, lst2):
+    lst3 = [value for value in lst1 if value in lst2]
+    return lst3
 
 
 def learn(qc, train_features, train_labels):
