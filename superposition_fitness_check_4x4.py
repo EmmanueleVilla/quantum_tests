@@ -224,7 +224,7 @@ def learn(qc, train_features, train_labels):
         for i in range(len(individual)):
             old = individual[i]
             individual[i] += np.random.uniform(-1 * offset, offset)
-            new_fitness = eval_fitness(qc, individual, features_graph, train_labels)
+            new_fitness = eval_fitness(individual, qc, features_graph, train_labels)
 
             if new_fitness > fitness:
                 fitness = new_fitness
