@@ -68,4 +68,6 @@ Check if the conv and pool layer are really invertible... conv OK, pool OK! (inv
 Try a new method to calculate the fitness and evolve the QCNN... using the basis encoding so we can merge the QCNN with Grover! (superposition_fitness_check.py). The oracle encoding and creation works, now trying with a bigger graph..
 
 #### Test 8
-Trying the oracle training with a 4x4 graph. Train data composed by nearly 700 graphs, 50:50 distribution. [IN PROGRESS]
+Trying the oracle training with a 4x4 graph. Train data composed by nearly 700 graphs, 50:50 distribution. Trainable params: 135.
+First try: Starting fitness at 16:15 is 0.389
+[IN PROGRESS]

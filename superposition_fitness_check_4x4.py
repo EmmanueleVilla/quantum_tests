@@ -1,4 +1,6 @@
+import datetime
 import random
+import time
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -176,9 +178,16 @@ def learn(qc, train_features, train_labels):
     features_graph = [''.join(str(x) for x in row) for row in train_features]
     print(features_graph)
 
+    times = []
+    fitnesses = []
+
     fitness = eval_fitness(qc, individual, features_graph, train_labels)
-    print("Start fitness: ", fitness)
+    times.append(int(time.time()))
+    fitnesses.append(fitness)
     offset = 0.001
+    print("*********")
+    print(times)
+    print(fitnesses)
     while True:
         found = False
         for i in range(len(individual)):
@@ -188,9 +197,17 @@ def learn(qc, train_features, train_labels):
 
             if new_fitness > fitness:
                 fitness = new_fitness
-                print("New fitness: ", fitness)
+                times.append(int(time.time()))
+                fitnesses.append(fitness)
+                print("*********")
+                print(times)
+                print(fitnesses)
                 i -= 1
                 found = True
+                # write the individual to file
+                with open("individual_4x4_optimization.txt", "w") as f:
+                    f.write(str(individual))
+
             else:
                 individual[i] = old
         if found:
