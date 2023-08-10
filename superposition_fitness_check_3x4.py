@@ -5,10 +5,12 @@ from numpy import sort
 from qiskit import QuantumCircuit, Aer, transpile
 
 from build_circuit import conv_layer, pool_layer
+from dataset import create_dataset
 
 
-def create_ansatz():
-    qc = QuantumCircuit(4)
+def create_ansatz(nqubits):
+    qc = QuantumCircuit(12)
+
     # Primo layer conv
     qc.compose(conv_layer(4, "с1"), list(range(4)), inplace=True)
 
@@ -34,16 +36,20 @@ def normalize_to_unit_length(vector):
 
 def test_circuit_initialization(qc, data):
     meas = qc.copy()
-    meas.measure(range(5), range(5))
+    meas.measure(range(len(data[0]) + 1), range(len(data[0]) + 1))
     print(meas.draw("text"))
 
     simulator = Aer.get_backend('qasm_simulator')
-    result = simulator.run(meas, shots=1024).result()
+    result = simulator.run(meas, shots=4096).result()
     counts = result.get_counts(meas)
 
     results = sorted([x[1:] for x in list(counts.keys())])
     print("Data:\t\t", sorted(data))
     print("Results:\t", results)
+
+    print("Data length: ", len(data))
+    print("Results length: ", len(results))
+    print("Intersection length: ", len(set(data).intersection(results)))
 
     data_arr = np.asarray(sorted(data))
     results_arr = np.asarray(results)
@@ -57,16 +63,19 @@ def test_circuit_initialization(qc, data):
 
 def state_vector_from_data(data):
     # I need to create a state vector with superposition of each sample + 0 and 1
-    # The number of states is 2^5
+    # The number of states is data.shape[1]
     data_full = []
-    size = 2 ** 4
+    size = 2 ** data.shape[1]
     state_vector = np.asarray([0.0] * size)
+    states = 0
     for state in data:
         full_state = "".join(str(x) for x in reversed(state))
         data_full.append(full_state)
         index = int(full_state, 2)
         state_vector[index] = 1
+        states += 1
     state_vector = normalize_to_unit_length(state_vector)
+    print("States: ", states)
     return state_vector, data_full
 
 
@@ -76,52 +85,14 @@ def create_circuit(data):
 
     # Now I have a state vector representing the superposition of all the samples + 0 and 1
     # Let's create it and check that the results are ok
-    qc = QuantumCircuit(5, 5)
-    qc.initialize(state_vector, range(4))
+    qc = QuantumCircuit(data.shape[1] + 1, data.shape[1] + 1)
+    qc.initialize(state_vector, range(data.shape[1]))
     qc.barrier()
 
     # Test if the output of the circuit matches the data
     test_circuit_initialization(qc.copy(), data_full)
 
     return qc
-
-
-def create_test_data():
-    all_samples = [
-        ([0, 0, 0, 0], 0),
-        ([0, 0, 0, 1], 1),
-        ([0, 0, 1, 0], 1),
-        ([0, 0, 1, 1], 0),
-        ([0, 1, 0, 0], 1),
-        ([0, 1, 0, 1], 0),
-        ([0, 1, 1, 0], 1),
-        ([0, 1, 1, 1], 0),
-        ([1, 0, 0, 0], 1),
-        ([1, 0, 0, 1], 1),
-        ([1, 0, 1, 0], 0),
-        ([1, 0, 1, 1], 1),
-        ([1, 1, 0, 0], 0),
-        ([1, 1, 0, 1], 0),
-        ([1, 1, 1, 0], 0),
-        ([1, 1, 1, 1], 1)
-    ]
-
-    random.shuffle(all_samples)
-    split_ratio = 0.7
-    split_idx = int(len(all_samples) * split_ratio)
-
-    train_data = all_samples[:split_idx]
-    test_data = all_samples[split_idx:]
-
-    train_features, train_labels = zip(*train_data)
-    test_features, test_labels = zip(*test_data)
-
-    train_features = np.array(train_features)
-    train_labels = np.array(train_labels)
-    test_features = np.array(test_features)
-    test_labels = np.array(test_labels)
-
-    return train_features, train_labels, test_features, test_labels
 
 
 def eval_circuit(qc):
@@ -138,12 +109,12 @@ def eval_fitness(qc, individual, features_graph, train_labels):
     fitness = 0
     target = list(zip(features_graph, [str(x) for x in train_labels]))
     target.sort(key=lambda x: x[0])
-    #print("Graphs:\t\t", target)
+    # print("Graphs:\t\t", target)
     meas = qc.copy()
 
     # print("base qc:\t", eval_circuit(meas))
 
-    ansatz = create_ansatz()
+    ansatz = create_ansatz(len(features_graph[0]))
     ansatz = ansatz.bind_parameters(individual)
 
     meas.compose(ansatz.copy(), range(4), inplace=True)
@@ -154,9 +125,9 @@ def eval_fitness(qc, individual, features_graph, train_labels):
     meas.compose(ansatz.copy().inverse(), range(4), inplace=True)
 
     result = eval_circuit(meas)
-    #print("oracle qc:\t", result)
+    # print("oracle qc:\t", result)
 
-    return len(intersection(result, target))
+    return len(intersection(result, target)) / len(target)
 
 
 def intersection(lst1, lst2):
@@ -165,7 +136,7 @@ def intersection(lst1, lst2):
 
 
 def learn(qc, train_features, train_labels):
-    ansatz = create_ansatz()
+    ansatz = create_ansatz(len(train_features[0]))
     num_theta = ansatz.num_parameters
 
     print("num_theta", num_theta)
@@ -199,9 +170,10 @@ def learn(qc, train_features, train_labels):
             if offset > 0.1:
                 offset = 0.001
 
+
 def main():
     # Create the data
-    train_features, train_labels, test_features, test_labels = create_test_data()
+    train_features, train_labels, test_features, test_labels = create_dataset(250, negative_value=0)
 
     print(train_features)
     print(train_labels)

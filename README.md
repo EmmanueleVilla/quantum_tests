@@ -65,4 +65,7 @@ A custom optimizer that changes the theta values using backtracking to search fo
 Check if the conv and pool layer are really invertible... conv OK, pool OK! (inversion_check.py)
 
 #### Test 7
-Try a new method to calculate the fitness and evolve the QCNN... using the basis encoding so we can merge the QCNN with Grover! (superposition_fitness_check.py) [IN PROGRESS]
+Try a new method to calculate the fitness and evolve the QCNN... using the basis encoding so we can merge the QCNN with Grover! (superposition_fitness_check.py). The oracle encoding and creation works, now trying with a bigger graph..
+
+#### Test 8
+Trying the oracle training with a 3x4 graph. Train data composed by nearly 400 graphs, 45% valid and 55% invalid. [IN PROGRESS]

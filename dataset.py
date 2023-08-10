@@ -11,7 +11,7 @@ def generate_grid_graph():
     return graph
 
 
-def create_dataset(size):
+def create_dataset(size, negative_value=-1):
     valid = []
     invalid = []
 
@@ -32,27 +32,36 @@ def create_dataset(size):
 
             if n1 == n2:
                 valid.append(new_graph)
-            else:
+
+            if n1 != n2:
                 invalid.append(new_graph)
         except:
             no += 1
 
     valid_data = []
 
+    already_seen = []
+
     for new_graph in valid:
         arr = [new_graph.nodes[node]['label'] for node in new_graph.nodes]
+        if arr in already_seen:
+            continue
         valid_data.append((arr, 1))
+        already_seen.append(arr)
 
     invalid_data = []
 
     for new_graph in invalid:
         arr = [new_graph.nodes[node]['label'] for node in new_graph.nodes]
-        invalid_data.append((arr, -1))
+        if arr in already_seen:
+            continue
+        invalid_data.append((arr, negative_value))
+        already_seen.append(arr)
 
     invalid_data = invalid_data[:size]
 
     all_samples = valid_data + invalid_data
-    random.shuffle(all_samples)
+    random.shuffle(list(all_samples))
     split_ratio = 0.8
     split_idx = int(len(all_samples) * split_ratio)
 
