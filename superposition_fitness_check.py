@@ -1,10 +1,11 @@
 import random
 
 import numpy as np
+from numpy import sort
 from qiskit import QuantumCircuit, Aer, transpile
-from sklearn.preprocessing import MinMaxScaler
 
 from build_circuit import conv_layer, pool_layer
+
 
 def create_ansatz():
     qc = QuantumCircuit(4)
@@ -22,6 +23,7 @@ def create_ansatz():
 
     return qc
 
+
 def normalize_to_unit_length(vector):
     norm = np.linalg.norm(vector)
     if norm == 0:
@@ -38,19 +40,17 @@ def test_circuit_initialization(qc, data):
     simulator = Aer.get_backend('qasm_simulator')
     result = simulator.run(meas, shots=1024).result()
     counts = result.get_counts(meas)
-    print(counts)
 
-    # check that the keys of the counts are the same as the data_full
-    for key in counts.keys():
-        if key not in data:
-            print("Test failed! Retry...")
-            return test_circuit_initialization(qc, data)
+    results = sorted([x[1:] for x in list(counts.keys())])
+    print("Data:\t\t", sorted(data))
+    print("Results:\t", results)
 
-    # and also the opposite
-    for key in data:
-        if key not in counts.keys():
-            print("Test failed! Retry...")
-            return test_circuit_initialization(qc, data)
+    data_arr = np.asarray(sorted(data))
+    results_arr = np.asarray(results)
+
+    if not np.array_equal(data_arr, results_arr):
+        print("Test failed! Retry...")
+        return test_circuit_initialization(qc, data)
 
     print("Test passed!")
 
@@ -59,28 +59,26 @@ def state_vector_from_data(data):
     # I need to create a state vector with superposition of each sample + 0 and 1
     # The number of states is 2^5
     data_full = []
-    size = 2 ** 5
+    size = 2 ** 4
     state_vector = np.asarray([0.0] * size)
     for state in data:
-        for i in range(2):
-            full_state = "".join(str(x) for x in state) + str(i)
-            data_full.append(full_state)
-            index = int(full_state, 2)
-            state_vector[index] = 1
-    state_vector[0] = 1 / np.sqrt(len(data) * 2)
+        full_state = "".join(str(x) for x in reversed(state))
+        data_full.append(full_state)
+        index = int(full_state, 2)
+        state_vector[index] = 1
     state_vector = normalize_to_unit_length(state_vector)
     return state_vector, data_full
 
 
 def create_circuit(data):
-
     # Creating a superposition of all the samples + 0 and 1
     state_vector, data_full = state_vector_from_data(data)
 
     # Now I have a state vector representing the superposition of all the samples + 0 and 1
     # Let's create it and check that the results are ok
     qc = QuantumCircuit(5, 5)
-    qc.initialize(state_vector, range(5))
+    qc.initialize(state_vector, range(4))
+    qc.barrier()
 
     # Test if the output of the circuit matches the data
     test_circuit_initialization(qc.copy(), data_full)
@@ -126,23 +124,38 @@ def create_test_data():
     return train_features, train_labels, test_features, test_labels
 
 
-def eval_fitness(qc, individual, features_graph, train_labels):
+def eval_circuit(qc):
+    meas = qc.copy()
+    meas.measure(range(5), range(5))
+    simulator = Aer.get_backend('qasm_simulator')
+    result = simulator.run(transpile(meas, simulator), shots=1024).result()
+    counts = result.get_counts()
+    results = sorted([x[1:] for x in list(counts.keys())])
+    print("Results:\t", results)
+    return results
 
+
+def eval_fitness(qc, individual, features_graph, train_labels):
     fitness = 0
 
+    print("Graphs:\t\t", list(sort(features_graph)))
     meas = qc.copy()
+
+    eval_circuit(meas)
+
     ansatz = create_ansatz()
     ansatz = ansatz.bind_parameters(individual)
 
     meas.compose(ansatz.copy(), range(4), inplace=True)
+    #meas.cx(3,4)
 
-    meas.cx(3, 4)
+    #meas.compose(ansatz.copy().inverse(), range(4), inplace=True)
 
-    inv_ansatz = create_ansatz()
-    inv_ansatz = inv_ansatz.bind_parameters(individual * -1)
-    meas.compose(inv_ansatz.copy(), range(4), inplace=True)
+    #print(meas.draw(output="text"))
 
-    #print(meas.decompose().draw("text"))
+    eval_circuit(meas)
+    return
+    # print(meas.decompose().draw("text"))
     meas.measure(range(5), range(5))
 
     simulator = Aer.get_backend('qasm_simulator')
@@ -162,7 +175,6 @@ def eval_fitness(qc, individual, features_graph, train_labels):
 
 
 def learn(qc, train_features, train_labels):
-
     ansatz = create_ansatz()
     num_theta = ansatz.num_parameters
 
@@ -188,6 +200,7 @@ def main():
 
     # now the circuit is ready to learn the data... if it works
     learn(qc, train_features, train_labels)
+
 
 if __name__ == "__main__":
     main()

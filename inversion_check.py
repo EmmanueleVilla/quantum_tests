@@ -2,14 +2,20 @@ import numpy as np
 from qiskit import QuantumCircuit, Aer, transpile
 
 from build_circuit import conv_layer, pool_layer
+from superposition_fitness_check import normalize_to_unit_length
 
 
 def base_circuit():
     qc = QuantumCircuit(4, 4)
-    qc.x(0)
-    qc.h(1)
-    qc.h(2)
-    qc.x(3)
+    size = 2 ** 4
+    state_vector = np.asarray([0.0] * size)
+    data = ["1111", "1001", "1011", "1101"]
+    for state in data:
+        index = int(state, 2)
+        state_vector[index] = 1
+    state_vector = normalize_to_unit_length(state_vector)
+
+    qc.initialize(state_vector)
     return qc
 
 def main():
