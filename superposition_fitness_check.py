@@ -146,9 +146,13 @@ def eval_fitness(qc, individual, features_graph, train_labels):
     ansatz = ansatz.bind_parameters(individual)
 
     meas.compose(ansatz.copy(), range(4), inplace=True)
-    #meas.cx(3,4)
 
-    #meas.compose(ansatz.copy().inverse(), range(4), inplace=True)
+    print("conv qc:\t", eval_circuit(meas))
+    meas.cx(4, 3)
+
+    meas.compose(ansatz.copy().inverse(), range(4), inplace=True)
+
+    print("conv qc:\t", eval_circuit(meas))
 
     #print(meas.draw(output="text"))
 
