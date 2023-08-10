@@ -18,13 +18,13 @@ def create_ansatz(nqubits):
     layer = 0
     index = 16
     while index > 1:
-        print("Layer: ", layer)
-        print("Conv layer with range: ", range(start, size))
+        #print("Layer: ", layer)
+        #print("Conv layer with range: ", range(start, size))
         qc.compose(conv_layer(index, f"с{layer}"), range(start, size), inplace=True)
         mid = index // 2
         source = range(0, mid)
         sink = range(mid, index)
-        print("Pool layer with source: ", source, " and sink: ", sink)
+        #print("Pool layer with source: ", source, " and sink: ", sink)
         qc.compose(pool_layer(source, sink, f"p{layer}"), range(start, size), inplace=True)
         index = index // 2
         layer += 1
@@ -32,12 +32,12 @@ def create_ansatz(nqubits):
         start += diff // 2
 
     # Disegna il circuito utilizzando Matplotlib
-    fig, ax = plt.subplots()
-    circuit_drawer(qc, output='mpl', ax=ax)
-    ax.axis('on')  # Mantieni gli assi visibili
+    #fig, ax = plt.subplots()
+    #circuit_drawer(qc, output='mpl', ax=ax)
+    #ax.axis('on')  # Mantieni gli assi visibili
 
     # Mostra il grafico
-    plt.show()
+    #plt.show()
     return qc
 
 
@@ -112,16 +112,22 @@ def create_circuit(data):
 
 def eval_circuit(qc):
     meas = qc.copy()
-    meas.measure(range(5), range(5))
+    meas.measure(range(qc.num_qubits), range(qc.num_qubits))
     simulator = Aer.get_backend('qasm_simulator')
     result = simulator.run(transpile(meas, simulator), shots=1024).result()
     counts = result.get_counts()
     results = [x[1:] for x in list(counts.keys())]
+    #fig, ax = plt.subplots()
+    #circuit_drawer(meas, output='mpl', ax=ax)
+    #ax.axis('on')  # Mantieni gli assi visibili
+
+    # Mostra il grafico
+    #plt.show()
     return sorted([(x[::-1], x[0]) for x in results])
 
 
 def eval_fitness(qc, individual, features_graph, train_labels):
-    fitness = 0
+
     target = list(zip(features_graph, [str(x) for x in train_labels]))
     target.sort(key=lambda x: x[0])
     # print("Graphs:\t\t", target)
@@ -129,15 +135,24 @@ def eval_fitness(qc, individual, features_graph, train_labels):
 
     # print("base qc:\t", eval_circuit(meas))
 
-    ansatz = create_ansatz(len(features_graph[0]))
+    circuit_size = len(features_graph[0])
+
+    ansatz = create_ansatz(circuit_size)
     ansatz = ansatz.bind_parameters(individual)
 
-    meas.compose(ansatz.copy(), range(4), inplace=True)
+    meas.compose(ansatz.copy(), range(circuit_size), inplace=True)
 
     # print("conv qc:\t", eval_circuit(meas))
-    meas.cx(4, 3)
+    meas.cx(circuit_size, circuit_size-1)
 
-    meas.compose(ansatz.copy().inverse(), range(4), inplace=True)
+    meas.compose(ansatz.copy().inverse(), range(circuit_size), inplace=True)
+
+    #fig, ax = plt.subplots()
+    #circuit_drawer(meas, output='mpl', ax=ax)
+    #ax.axis('on')  # Mantieni gli assi visibili
+
+    # Mostra il grafico
+    #plt.show()
 
     result = eval_circuit(meas)
     # print("oracle qc:\t", result)
