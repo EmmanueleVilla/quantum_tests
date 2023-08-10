@@ -1,28 +1,43 @@
 import random
 
 import numpy as np
+from matplotlib import pyplot as plt
 from numpy import sort
 from qiskit import QuantumCircuit, Aer, transpile
+from qiskit.visualization import circuit_drawer
 
 from build_circuit import conv_layer, pool_layer
 from dataset import create_dataset
 
 
 def create_ansatz(nqubits):
-    qc = QuantumCircuit(12)
+    qc = QuantumCircuit(nqubits)
 
-    # Primo layer conv
-    qc.compose(conv_layer(4, "с1"), list(range(4)), inplace=True)
+    size = nqubits
+    start = 0
+    layer = 0
+    index = 16
+    while index > 1:
+        print("Layer: ", layer)
+        print("Conv layer with range: ", range(start, size))
+        qc.compose(conv_layer(index, f"с{layer}"), range(start, size), inplace=True)
+        mid = index // 2
+        source = range(0, mid)
+        sink = range(mid, index)
+        print("Pool layer with source: ", source, " and sink: ", sink)
+        qc.compose(pool_layer(source, sink, f"p{layer}"), range(start, size), inplace=True)
+        index = index // 2
+        layer += 1
+        diff = size - start
+        start += diff // 2
 
-    # Primo layer pool
-    qc.compose(pool_layer([0, 1], [2, 3], "p1"), list(range(4)), inplace=True)
+    # Disegna il circuito utilizzando Matplotlib
+    fig, ax = plt.subplots()
+    circuit_drawer(qc, output='mpl', ax=ax)
+    ax.axis('on')  # Mantieni gli assi visibili
 
-    # Secondo layer conv
-    qc.compose(conv_layer(2, "с2"), list(range(2, 4)), inplace=True)
-
-    # Secondo layer pool
-    qc.compose(pool_layer([0], [1], "p2"), list(range(2, 4)), inplace=True)
-
+    # Mostra il grafico
+    plt.show()
     return qc
 
 
@@ -37,15 +52,15 @@ def normalize_to_unit_length(vector):
 def test_circuit_initialization(qc, data):
     meas = qc.copy()
     meas.measure(range(len(data[0]) + 1), range(len(data[0]) + 1))
-    print(meas.draw("text"))
+    #print(meas.draw("text"))
 
     simulator = Aer.get_backend('qasm_simulator')
     result = simulator.run(meas, shots=4096).result()
     counts = result.get_counts(meas)
 
     results = sorted([x[1:] for x in list(counts.keys())])
-    print("Data:\t\t", sorted(data))
-    print("Results:\t", results)
+    #print("Data:\t\t", sorted(data))
+    #print("Results:\t", results)
 
     print("Data length: ", len(data))
     print("Results length: ", len(results))
@@ -173,7 +188,7 @@ def learn(qc, train_features, train_labels):
 
 def main():
     # Create the data
-    train_features, train_labels, test_features, test_labels = create_dataset(250, negative_value=0)
+    train_features, train_labels, test_features, test_labels = create_dataset(350, negative_value=0, m=4, n=4)
 
     print(train_features)
     print(train_labels)

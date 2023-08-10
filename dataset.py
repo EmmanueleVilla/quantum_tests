@@ -4,21 +4,21 @@ import networkx as nx
 import numpy as np
 
 
-def generate_grid_graph():
-    graph = nx.grid_2d_graph(3, 4)
+def generate_grid_graph(m, n):
+    graph = nx.grid_2d_graph(m, n)
     for node in graph.nodes:
         graph.nodes[node]['label'] = random.choice([0, 1])
     return graph
 
 
-def create_dataset(size, negative_value=-1):
+def create_dataset(size, negative_value=-1, m=3, n=4):
     valid = []
     invalid = []
 
     no = 0
     while len(valid) < size or len(invalid) < size:
         try:
-            new_graph = generate_grid_graph()
+            new_graph = generate_grid_graph(m, n)
 
             subgraph_nodes = [node for node in new_graph.nodes() if new_graph.nodes[node]['label'] == 1]
             subgraph = new_graph.subgraph(subgraph_nodes)
