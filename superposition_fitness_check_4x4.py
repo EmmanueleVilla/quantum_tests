@@ -170,21 +170,16 @@ def eval_fitness(individual, qc, features_graph, train_labels):
 
     value = (len(intersection(result, target)) / len(target))
 
-    if value > best_value:
-        best_value = value
-        times.append(int(time.time()))
-        fitnesses.append(best_value)
-        with open("individual_4x4_cobyla.txt", "w") as f:
-            f.write(str(individual))
-        print(
-            f"------------\ntimes = {times}\nfitnesses = {fitnesses}")
-
-    return 1 / value
+    return value
 
 
 def intersection(lst1, lst2):
     lst3 = [value for value in lst1 if value in lst2]
     return lst3
+
+
+def base_offset(fitness):
+    return (-4.82923076923077 * fitness + 4.347307692307693) / 2.5
 
 
 def learn(qc, train_features, train_labels):
@@ -211,9 +206,9 @@ def learn(qc, train_features, train_labels):
     print(features_graph)
 
     offsets = []
-    fitness = eval_fitness(qc, individual, features_graph, train_labels)
+    fitness = eval_fitness(individual, qc, features_graph, train_labels)
 
-    offset = -0.15369230769230768 * fitness + 0.1384230769230769
+    offset = base_offset(fitness)
     times.append(int(time.time()))
     fitnesses.append(fitness)
     offsets.append(offset)
@@ -235,22 +230,20 @@ def learn(qc, train_features, train_labels):
                 i -= 1
                 found = True
                 # write the individual to file
-                with open("individual_4x4_manual_search.txt", "w") as f:
-                    f.write(str(individual))
+                print("thetas = ", individual)
+                #with open("individual_4x4_manual_search.txt", "w") as f:
+                #    f.write(str(individual))
 
             else:
                 individual[i] = old
         if found:
-            offset = -0.15369230769230768 * fitness + 0.1384230769230769
+            offset = base_offset(fitness)
         else:
             # randomly increase or decrease the offset
-            if np.random.uniform(0, 1) > 0.5:
-                offset += 0.001
-            else:
-                offset -= 0.001
+            offset -= -0.1523076923076923 * fitness + 0.1380769230769231
             if offset < 0.0001:
                 print("  >> Offset too small, resetting...")
-                offset = -0.15369230769230768 * fitness + 0.1384230769230769  # Reset since it's too much
+                offset = base_offset(fitness)  # Reset since it's too small
 
 
 def main():
