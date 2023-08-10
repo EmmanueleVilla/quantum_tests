@@ -69,5 +69,9 @@ Try a new method to calculate the fitness and evolve the QCNN... using the basis
 
 #### Test 8
 Trying the oracle training with a 4x4 graph. Train data composed by nearly 700 graphs, 50:50 distribution. Trainable params: 135.
-First try: Starting fitness at 16:15 is 0.389
-[IN PROGRESS]
+
+First try: Starting fitness is 0.4342. After 30min it's 0.4630
+
+Second try with bigger initial jumps: Starting fitness is 0.4162. After 30min it's 0.4306
+
+Third try: I found out there's a COBYLA optimizer that can be customized. trying with that one. Starting fitness at 18:30 is 0.38. [IN PROGRESS]

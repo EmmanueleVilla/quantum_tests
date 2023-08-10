@@ -11,6 +11,8 @@ from qiskit.visualization import circuit_drawer
 from build_circuit import conv_layer, pool_layer
 from dataset import create_dataset
 
+from scipy.optimize import minimize
+
 
 def create_ansatz(nqubits):
     qc = QuantumCircuit(nqubits)
@@ -20,13 +22,13 @@ def create_ansatz(nqubits):
     layer = 0
     index = 16
     while index > 1:
-        #print("Layer: ", layer)
-        #print("Conv layer with range: ", range(start, size))
+        # print("Layer: ", layer)
+        # print("Conv layer with range: ", range(start, size))
         qc.compose(conv_layer(index, f"с{layer}"), range(start, size), inplace=True)
         mid = index // 2
         source = range(0, mid)
         sink = range(mid, index)
-        #print("Pool layer with source: ", source, " and sink: ", sink)
+        # print("Pool layer with source: ", source, " and sink: ", sink)
         qc.compose(pool_layer(source, sink, f"p{layer}"), range(start, size), inplace=True)
         index = index // 2
         layer += 1
@@ -34,12 +36,12 @@ def create_ansatz(nqubits):
         start += diff // 2
 
     # Disegna il circuito utilizzando Matplotlib
-    #fig, ax = plt.subplots()
-    #circuit_drawer(qc, output='mpl', ax=ax)
-    #ax.axis('on')  # Mantieni gli assi visibili
+    # fig, ax = plt.subplots()
+    # circuit_drawer(qc, output='mpl', ax=ax)
+    # ax.axis('on')  # Mantieni gli assi visibili
 
     # Mostra il grafico
-    #plt.show()
+    # plt.show()
     return qc
 
 
@@ -54,15 +56,15 @@ def normalize_to_unit_length(vector):
 def test_circuit_initialization(qc, data):
     meas = qc.copy()
     meas.measure(range(len(data[0]) + 1), range(len(data[0]) + 1))
-    #print(meas.draw("text"))
+    # print(meas.draw("text"))
 
     simulator = Aer.get_backend('qasm_simulator')
     result = simulator.run(meas, shots=4096).result()
     counts = result.get_counts(meas)
 
     results = sorted([x[1:] for x in list(counts.keys())])
-    #print("Data:\t\t", sorted(data))
-    #print("Results:\t", results)
+    # print("Data:\t\t", sorted(data))
+    # print("Results:\t", results)
 
     print("Data length: ", len(data))
     print("Results length: ", len(results))
@@ -119,17 +121,24 @@ def eval_circuit(qc):
     result = simulator.run(transpile(meas, simulator), shots=1024).result()
     counts = result.get_counts()
     results = [x[1:] for x in list(counts.keys())]
-    #fig, ax = plt.subplots()
-    #circuit_drawer(meas, output='mpl', ax=ax)
-    #ax.axis('on')  # Mantieni gli assi visibili
+    # fig, ax = plt.subplots()
+    # circuit_drawer(meas, output='mpl', ax=ax)
+    # ax.axis('on')  # Mantieni gli assi visibili
 
     # Mostra il grafico
-    #plt.show()
+    # plt.show()
     return sorted([(x[::-1], x[0]) for x in results])
 
 
-def eval_fitness(qc, individual, features_graph, train_labels):
+best_value = 0
+times = []
+fitnesses = []
 
+
+def eval_fitness(individual, qc, features_graph, train_labels):
+    global best_value
+    global times
+    global fitnesses
     target = list(zip(features_graph, [str(x) for x in train_labels]))
     target.sort(key=lambda x: x[0])
     # print("Graphs:\t\t", target)
@@ -145,21 +154,32 @@ def eval_fitness(qc, individual, features_graph, train_labels):
     meas.compose(ansatz.copy(), range(circuit_size), inplace=True)
 
     # print("conv qc:\t", eval_circuit(meas))
-    meas.cx(circuit_size, circuit_size-1)
+    meas.cx(circuit_size, circuit_size - 1)
 
     meas.compose(ansatz.copy().inverse(), range(circuit_size), inplace=True)
 
-    #fig, ax = plt.subplots()
-    #circuit_drawer(meas, output='mpl', ax=ax)
-    #ax.axis('on')  # Mantieni gli assi visibili
+    # fig, ax = plt.subplots()
+    # circuit_drawer(meas, output='mpl', ax=ax)
+    # ax.axis('on')  # Mantieni gli assi visibili
 
     # Mostra il grafico
-    #plt.show()
+    # plt.show()
 
     result = eval_circuit(meas)
     # print("oracle qc:\t", result)
 
-    return len(intersection(result, target)) / len(target)
+    value = (len(intersection(result, target)) / len(target))
+
+    if value > best_value:
+        best_value = value
+        times.append(int(time.time()))
+        fitnesses.append(best_value)
+        with open("individual_4x4_cobyla.txt", "w") as f:
+            f.write(str(individual))
+        print(
+            f"------------\ntimes = {times}\nfitnesses = {fitnesses}")
+
+    return 1 / value
 
 
 def intersection(lst1, lst2):
@@ -176,18 +196,29 @@ def learn(qc, train_features, train_labels):
     individual = np.random.normal(0, np.pi / 10, num_theta)
 
     features_graph = [''.join(str(x) for x in row) for row in train_features]
+    """
+    result = minimize(
+        fun=eval_fitness,
+        x0=individual,
+        method="COBYLA",
+        args=(qc, features_graph, train_labels),
+        options={'maxfev': 1000000000, 'maxiter': 1000000000}
+    )
+
+    print(result)
+    return result
+    """
     print(features_graph)
 
-    times = []
-    fitnesses = []
-
+    offsets = []
     fitness = eval_fitness(qc, individual, features_graph, train_labels)
+
+    offset = -0.15369230769230768 * fitness + 0.1384230769230769
     times.append(int(time.time()))
     fitnesses.append(fitness)
-    offset = 0.001
-    print("*********")
-    print(times)
-    print(fitnesses)
+    offsets.append(offset)
+    print(
+        f"------------\noffsets={offsets}\ntimes = {times}\nfitnesses = {fitnesses}")
     while True:
         found = False
         for i in range(len(individual)):
@@ -199,23 +230,27 @@ def learn(qc, train_features, train_labels):
                 fitness = new_fitness
                 times.append(int(time.time()))
                 fitnesses.append(fitness)
-                print("*********")
-                print(times)
-                print(fitnesses)
+                offsets.append(offset)
+                print(f"------------\noffsets={offsets}\ntimes = {times}\nfitnesses = {fitnesses}")
                 i -= 1
                 found = True
                 # write the individual to file
-                with open("individual_4x4_optimization.txt", "w") as f:
+                with open("individual_4x4_manual_search.txt", "w") as f:
                     f.write(str(individual))
 
             else:
                 individual[i] = old
         if found:
-            offset = 0.001
+            offset = -0.15369230769230768 * fitness + 0.1384230769230769
         else:
-            offset += 0.001
-            if offset > 0.1:
-                offset = 0.001
+            # randomly increase or decrease the offset
+            if np.random.uniform(0, 1) > 0.5:
+                offset += 0.001
+            else:
+                offset -= 0.001
+            if offset < 0.0001:
+                print("  >> Offset too small, resetting...")
+                offset = -0.15369230769230768 * fitness + 0.1384230769230769  # Reset since it's too much
 
 
 def main():
