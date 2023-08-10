@@ -177,7 +177,7 @@ def learn(qc, train_features, train_labels):
     print(features_graph)
 
     fitness = eval_fitness(qc, individual, features_graph, train_labels)
-    print(fitness)
+    print("Start fitness: ", fitness)
     offset = 0.001
     while True:
         found = False
@@ -188,7 +188,7 @@ def learn(qc, train_features, train_labels):
 
             if new_fitness > fitness:
                 fitness = new_fitness
-                print("New fitness", fitness)
+                print("New fitness: ", fitness)
                 i -= 1
                 found = True
             else:
