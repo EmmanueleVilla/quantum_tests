@@ -59,4 +59,10 @@ End accuracy: 56%, but it was 64% at some point, I swear.
 (25 sec per generation)
 
 #### Test 5
-A custom optimizer that changes the theta values using backtracking to search for a local optima... TODO
+A custom optimizer that changes the theta values using backtracking to search for a local optima... The exploration seems to work! But we need to find a better way to check the fitness
+
+#### Test 6
+Check if the conv and pool layer are really invertible... conv OK, pool OK! (inversion_check.py)
+
+#### Test 7
+Try a new method to calculate the fitness and evolve the QCNN... using the basis encoding so we can merge the QCNN with Grover! (superposition_fitness_check.py) [IN PROGRESS]

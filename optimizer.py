@@ -44,7 +44,7 @@ class OptimizationApp:
         self.text_frame.pack()
 
         # Creazione del widget di testo con testo bianco
-        self.text_view = tk.Text(self.text_frame, height=10, width=100, fg="white")
+        self.text_view = tk.Text(self.text_frame, height=10, width=100)
         self.text_view.pack()
 
     def update_text_view(self, failed_attempts, fitness, offset):
