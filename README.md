@@ -84,10 +84,13 @@ It seems the model doesn't work with this encoding...
 Try to find the oracle with a BFS on an operation list! (oracle_bfs_2.py) - it works!
 
 #### Test 11
-Upgrade to a 2x2 matrix [TODO]
+Upgrade to a 2x2 matrix. It works! NAISU
 
 #### Test 12
-Upgrade to a NxN matrix [TODO] (also print number of nodes visited etc etc)
+Upgrade to a NxM matrix and check the max size we can reach!
+(also print number of nodes visited etc etc)
+Can we do a % accuracy search instead of pre-calculating everything?
+[TODO]
 
 #### Test 13
-Upgrade to a NxM matrix [TODO] - Same as 12?
+Try if we can use this algorithm to find faster oracle from the famous examples....
