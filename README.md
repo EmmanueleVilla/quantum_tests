@@ -87,7 +87,7 @@ Try to find the oracle with a BFS on an operation list! (oracle_bfs_2.py) - it w
 Upgrade to a 2x2 matrix [TODO]
 
 #### Test 12
-Upgrade to a NxN matrix [TODO]
+Upgrade to a NxN matrix [TODO] (also print number of nodes visited etc etc)
 
 #### Test 13
 Upgrade to a NxM matrix [TODO] - Same as 12?
