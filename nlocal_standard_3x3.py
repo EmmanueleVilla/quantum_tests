@@ -1,0 +1,271 @@
+import datetime
+import random
+import time
+
+import numpy as np
+from matplotlib import pyplot as plt
+from numpy import sort
+from qiskit import QuantumCircuit, Aer, transpile
+from qiskit.circuit import Parameter
+from qiskit.visualization import circuit_drawer
+
+from build_circuit import conv_layer, pool_layer
+from dataset import create_dataset
+
+from scipy.optimize import minimize
+
+from qiskit.circuit.library import TwoLocal
+
+import networkx as nx
+
+
+def create_ansatz(nqubits):
+    qc = QuantumCircuit(nqubits)
+    graph = nx.grid_2d_graph(3, 3)
+
+    cnots = []
+
+    from qiskit.circuit.library import NLocal, CXGate, CRZGate, RXGate
+
+    theta = Parameter("θ")
+
+    # foreach arch in graph
+    for arch in graph.edges:
+        cnots.append([arch[0], arch[1]])
+
+    ansatz = TwoLocal(
+        nqubits,
+        rotation_blocks=[RXGate(theta), CRZGate(theta)],
+        entanglement_blocks=CXGate(),
+        entanglement=cnots,
+        insert_barriers=True,
+        reps=5)
+
+    # Disegna il circuito utilizzando Matplotlib
+    #fig, ax = plt.subplots()
+    #circuit_drawer(ansatz.decompose(), output='mpl', ax=ax)
+    #ax.axis('on')  # Mantieni gli assi visibili
+
+    # Mostra il grafico
+    #plt.show()
+    qc.compose(ansatz.decompose(), range(nqubits), inplace=True)
+    return qc
+
+
+def normalize_to_unit_length(vector):
+    norm = np.linalg.norm(vector)
+    if norm == 0:
+        return vector
+    normalized_vector = vector / norm
+    return normalized_vector
+
+
+def test_circuit_initialization(qc, data):
+    meas = qc.copy()
+    meas.measure(range(len(data[0]) + 1), range(len(data[0]) + 1))
+    # print(meas.draw("text"))
+
+    simulator = Aer.get_backend('qasm_simulator')
+    result = simulator.run(meas, shots=4096).result()
+    counts = result.get_counts(meas)
+
+    results = sorted([x[1:] for x in list(counts.keys())])
+    # print("Data:\t\t", sorted(data))
+    # print("Results:\t", results)
+
+    print("Data length: ", len(data))
+    print("Results length: ", len(results))
+    print("Intersection length: ", len(set(data).intersection(results)))
+
+    data_arr = np.asarray(sorted(data))
+    results_arr = np.asarray(results)
+
+    if not np.array_equal(data_arr, results_arr):
+        print("Test failed! Retry...")
+        return test_circuit_initialization(qc, data)
+
+    print("Test passed!")
+
+
+def state_vector_from_data(data):
+    # I need to create a state vector with superposition of each sample + 0 and 1
+    # The number of states is data.shape[1]
+    data_full = []
+    size = 2 ** data.shape[1]
+    state_vector = np.asarray([0.0] * size)
+    states = 0
+    for state in data:
+        full_state = "".join(str(x) for x in reversed(state))
+        data_full.append(full_state)
+        index = int(full_state, 2)
+        state_vector[index] = 1
+        states += 1
+    state_vector = normalize_to_unit_length(state_vector)
+    print("States: ", states)
+    return state_vector, data_full
+
+
+def create_circuit(data):
+    # Creating a superposition of all the samples + 0 and 1
+    state_vector, data_full = state_vector_from_data(data)
+
+    # Now I have a state vector representing the superposition of all the samples + 0 and 1
+    # Let's create it and check that the results are ok
+    qc = QuantumCircuit(data.shape[1] + 1, data.shape[1] + 1)
+    qc.initialize(state_vector, range(data.shape[1]))
+    qc.barrier()
+
+    # Test if the output of the circuit matches the data
+    test_circuit_initialization(qc.copy(), data_full)
+
+    return qc
+
+
+def eval_circuit(qc):
+    meas = qc.copy()
+    meas.measure(range(qc.num_qubits), range(qc.num_qubits))
+    simulator = Aer.get_backend('qasm_simulator')
+    result = simulator.run(transpile(meas, simulator), shots=1024).result()
+    counts = result.get_counts()
+    results = [x[1:] for x in list(counts.keys())]
+    # fig, ax = plt.subplots()
+    # circuit_drawer(meas, output='mpl', ax=ax)
+    # ax.axis('on')  # Mantieni gli assi visibili
+
+    # Mostra il grafico
+    # plt.show()
+    return sorted([(x[::-1], x[0]) for x in results])
+
+
+best_value = 0
+times = []
+fitnesses = []
+
+
+def eval_fitness(individual, qc, features_graph, train_labels):
+    global best_value
+    global times
+    global fitnesses
+    target = list(zip(features_graph, [str(x) for x in train_labels]))
+    target.sort(key=lambda x: x[0])
+    # print("Graphs:\t\t", target)
+    meas = qc.copy()
+
+    # print("base qc:\t", eval_circuit(meas))
+
+    circuit_size = len(features_graph[0])
+
+    ansatz = create_ansatz(circuit_size)
+    ansatz = ansatz.bind_parameters(individual)
+
+    meas.compose(ansatz.copy(), range(circuit_size), inplace=True)
+
+    # print("conv qc:\t", eval_circuit(meas))
+    meas.cx(circuit_size, circuit_size - 1)
+
+    meas.compose(ansatz.copy().inverse(), range(circuit_size), inplace=True)
+
+    # fig, ax = plt.subplots()
+    # circuit_drawer(meas, output='mpl', ax=ax)
+    # ax.axis('on')  # Mantieni gli assi visibili
+
+    # Mostra il grafico
+    # plt.show()
+
+    result = eval_circuit(meas)
+    # print("oracle qc:\t", result)
+
+    value = (len(intersection(result, target)) / len(target))
+
+    return value
+
+
+def intersection(lst1, lst2):
+    lst3 = [value for value in lst1 if value in lst2]
+    return lst3
+
+
+def base_offset(fitness):
+    return (-4.82923076923077 * fitness + 4.347307692307693) / 2.5
+
+
+def learn(qc, train_features, train_labels):
+    ansatz = create_ansatz(len(train_features[0]))
+    num_theta = ansatz.num_parameters
+
+    print("num_theta", num_theta)
+
+    individual = np.random.normal(0, np.pi / 10, num_theta)
+
+    features_graph = [''.join(str(x) for x in row) for row in train_features]
+    """
+    result = minimize(
+        fun=eval_fitness,
+        x0=individual,
+        method="COBYLA",
+        args=(qc, features_graph, train_labels),
+        options={'maxfev': 1000000000, 'maxiter': 1000000000}
+    )
+
+    print(result)
+    return result
+    """
+    print(features_graph)
+
+    offsets = []
+    fitness = eval_fitness(individual, qc, features_graph, train_labels)
+
+    offset = base_offset(fitness)
+    times.append(int(time.time()))
+    fitnesses.append(fitness)
+    offsets.append(offset)
+    print(
+        f"------------\noffsets={offsets}\ntimes = {times}\nfitnesses = {fitnesses}")
+    while True:
+        found = False
+        for i in range(len(individual)):
+            old = individual[i]
+            individual[i] += np.random.uniform(-1 * offset, offset)
+            new_fitness = eval_fitness(individual, qc, features_graph, train_labels)
+
+            if new_fitness > fitness:
+                fitness = new_fitness
+                times.append(int(time.time()))
+                fitnesses.append(fitness)
+                offsets.append(offset)
+                print(f"------------\noffsets={offsets}\ntimes = {times}\nfitnesses = {fitnesses}")
+                i -= 1
+                found = True
+                # write the individual to file
+                # print("thetas = ", individual)
+                with open("individual_4x4_manual_search_mac.txt", "w") as f:
+                    f.write(str(individual))
+
+            else:
+                individual[i] = old
+        if found:
+            offset = offset  # base_offset(fitness)
+        else:
+            # randomly increase or decrease the offset
+            offset -= -0.1523076923076923 * fitness + 0.1380769230769231
+            if offset < 0.0001:
+                print("  >> Offset too small, resetting...")
+                offset = base_offset(fitness)  # Reset since it's too small
+
+
+def main():
+    # Create the data
+    train_features, train_labels, test_features, test_labels = create_dataset(150, negative_value=0, m=3, n=3)
+
+    print(train_features)
+    print(train_labels)
+
+    # Create the circuit
+    qc = create_circuit(train_features)
+
+    # now the circuit is ready to learn the data... if it works
+    learn(qc, train_features, train_labels)
+
+
+if __name__ == "__main__":
+    main()

@@ -80,8 +80,14 @@ Forth try with custom optimizer: Starting fitness is 0.39. After 8 hours its 0.4
 
 It seems the model doesn't work with this encoding...
 
-#### Test 9
-Prova di addestramento cojn una QCNN e dati 4x4
-Energia iniziale: [TODO]
-Energia dopo 1000 iterazioni ([TODO] ore): [TODO]
-Fitness: [TODO]
+#### Test 10
+Try to find the oracle with a BFS on an operation list! (oracle_bfs_2.py) - it works!
+
+#### Test 11
+Upgrade to a 2x2 matrix [TODO]
+
+#### Test 12
+Upgrade to a NxN matrix [TODO]
+
+#### Test 13
+Upgrade to a NxM matrix [TODO] - Same as 12?
