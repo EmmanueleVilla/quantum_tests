@@ -230,14 +230,14 @@ def learn(qc, train_features, train_labels):
                 i -= 1
                 found = True
                 # write the individual to file
-                print("thetas = ", individual)
-                #with open("individual_4x4_manual_search.txt", "w") as f:
-                #    f.write(str(individual))
+                #print("thetas = ", individual)
+                with open("individual_4x4_manual_search_mac.txt", "w") as f:
+                    f.write(str(individual))
 
             else:
                 individual[i] = old
         if found:
-            offset = base_offset(fitness)
+            offset = offset#base_offset(fitness)
         else:
             # randomly increase or decrease the offset
             offset -= -0.1523076923076923 * fitness + 0.1380769230769231

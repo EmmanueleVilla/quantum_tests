@@ -74,4 +74,14 @@ First try: Starting fitness is 0.4342. After 30min it's 0.4630
 
 Second try with bigger initial jumps: Starting fitness is 0.4162. After 30min it's 0.4306
 
-Third try: I found out there's a COBYLA optimizer that can be customized. trying with that one. Starting fitness at 18:30 is 0.38. [IN PROGRESS]
+Third try: I found out there's a COBYLA optimizer that can be customized. trying with that one. Starting fitness at 18:30 is 0.38. After 30min it's 0.43
+
+Forth try with custom optimizer: Starting fitness is 0.39. After 8 hours its 0.42
+
+It seems the model doesn't work with this encoding...
+
+#### Test 9
+Prova di addestramento cojn una QCNN e dati 4x4
+Energia iniziale: [TODO]
+Energia dopo 1000 iterazioni ([TODO] ore): [TODO]
+Fitness: [TODO]
