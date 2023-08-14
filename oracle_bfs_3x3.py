@@ -1,8 +1,9 @@
+import time
 from collections import deque
 
-from qiskit import QuantumCircuit, Aer, transpile
+from qiskit import QuantumCircuit, Aer, transpile, assemble
 from qiskit.circuit import Gate
-from qiskit.circuit.library import CXGate, ZGate, CZGate
+from qiskit.circuit.library import CXGate, ZGate, CZGate, CCZGate
 from qiskit.quantum_info import Statevector
 import numpy as np
 
@@ -13,15 +14,18 @@ class QuantumGate:
         self.target_qubit = target_qubit
         self.control_qubits = control_qubits
 
-    def debug(self):
-        return f"{self.gate_name}({self.target_qubit}, {self.control_qubits}"
+    def repr(self):
+        return f"{self.gate_name}({self.target_qubit}, {self.control_qubits})"
 
 
 class QuantumNode:
-    def __init__(self, vector: str, operations: [QuantumGate], fitness: int):
+    def __init__(self, vector: Statevector, operations: [QuantumGate], fitness: int):
         self.vector = vector
         self.operations = operations
         self.fitness = fitness
+
+    def repr(self):
+        return state_vector_to_string(self.vector)
 
     def __lt__(self, other):
         return self.fitness < other.fitness
@@ -30,58 +34,77 @@ class QuantumNode:
 def state_vector_to_string(vector: Statevector) -> str:
     return "".join(["+" if x >= 0 else "-" for x in vector.data])
 
-
-def apply_operations(operations: [QuantumGate]) -> str:
-    # print("***********************")
-    # print("operations:", [x.debug() for x in operations])
-    circuit = QuantumCircuit(9)
-    circuit.h(range(9))
-    for operation in operations:
-        if operation.gate_name == "Z" and len(operation.control_qubits) == 0:
-            circuit.z(operation.target_qubit)
-        if operation.gate_name == "CZ" and len(operation.control_qubits) == 1:
-            circuit.cz(operation.control_qubits[0], operation.target_qubit)
-        if operation.gate_name == "CCZ" and len(operation.control_qubits) == 2:
-            circuit.ccz(operation.control_qubits[0], operation.control_qubits[1], operation.target_qubit)
-
-    # print(circuit.draw("text"))
-    simulator = Aer.get_backend('statevector_simulator')
-    simulator_result = simulator.run(transpile(circuit)).result()
-    simulator_vector: Statevector = simulator_result.get_statevector()
-    vector_node = state_vector_to_string(simulator_vector)
-    return vector_node
 from typing import List
 
 
-def get_neighbors(target_vector, current_operations, next_operation) -> List[QuantumNode]:
+def get_neighbors(target_vector: str, current_vector: Statevector, current_operations, next_operation) -> List[QuantumNode]:
     neighbors: [QuantumNode] = []
     if next_operation == "Z":
-        for qubit1 in range(9):
+        for qubit1 in range(2*3):
             new_operations = current_operations + [QuantumGate("Z", qubit1, [])]
-            test_node = apply_operations(new_operations)
-            fitness = sum(c1 == c2 for c1, c2 in zip(test_node, target_vector))
+            test_node = current_vector.evolve(ZGate(), qargs=[qubit1])
+            fitness = sum(c1 == c2 for c1, c2 in zip(state_vector_to_string(test_node), target_vector))
             neighbors.append(QuantumNode(test_node, new_operations, fitness))
     if next_operation == "CZ":
-        for qubit1 in range(9):
-            for qubit2 in range(9):
+        for qubit1 in range(2*3):
+            for qubit2 in range(2*3):
                 if qubit1 != qubit2:
                     new_operations = current_operations + [QuantumGate("CZ", qubit1, [qubit2])]
-                    test_node = apply_operations(new_operations)
-                    fitness = sum(c1 == c2 for c1, c2 in zip(test_node, target_vector))
+                    test_node = current_vector.evolve(CZGate(), qargs=[qubit1, qubit2])
+                    fitness = sum(c1 == c2 for c1, c2 in zip(state_vector_to_string(test_node), target_vector))
                     neighbors.append(QuantumNode(test_node, new_operations, fitness))
+    if next_operation == "CCZ":
+        for qubit1 in range(2*3):
+            for qubit2 in range(2*3):
+                for qubit3 in range(2*3):
+                    if qubit1 != qubit2 and qubit1 != qubit3 and qubit2 != qubit3:
+                        new_operations = current_operations + [QuantumGate("CCZ", qubit1, [qubit2, qubit3])]
+                        test_node = current_vector.evolve(CCZGate(), qargs=[qubit1, qubit2, qubit3])
+                        fitness = sum(c1 == c2 for c1, c2 in zip(state_vector_to_string(test_node), target_vector))
+                        neighbors.append(QuantumNode(test_node, new_operations, fitness))
     return neighbors
 
 
-def dfs(target_vector, operations_list):
+def dfs(base_state_vector, target_vector, operations_list):
     count = 0
-    visited: [QuantumNode] = []
-    start_vector: str = "+" * 512
-    best: QuantumNode = QuantumNode(start_vector, [], 0)
+    visited: [str] = []
+    best: QuantumNode = QuantumNode(base_state_vector, [], 0)
     nodes_to_explore: [QuantumNode] = [best]
-    visited.append(start_vector)
+    times = []
+    nodes = []
+    fitnesses = {}
+    vectors = {}
+
+    start = int(time.time())
 
     while nodes_to_explore:
-        current: QuantumNode = nodes_to_explore.pop()
+        current: QuantumNode = nodes_to_explore.pop(0)
+
+        if current in visited:
+            continue
+
+        visited.append(current.repr())
+        if len(visited) % 100 == 0:
+            print("-------------")
+            print("visited:", len(visited))
+            print("queued:", len(nodes_to_explore))
+            print("best:", best.fitness)
+            print("ops:", [x.repr() for x in current.operations])
+            print("fitnesses:", fitnesses)
+            print("vectors:", vectors)
+            times.append(int(time.time()) - start)
+            nodes.append(len(visited))
+            file = open("oracle_bfs_3x2_log_times_evolution_fixed.txt", "w")
+            file.write(f"\ntimes={times}\nnodes={nodes}\nfitnesses={fitnesses}\n")
+            file.close()
+
+        if current.fitness not in fitnesses:
+            fitnesses[current.fitness] = 0
+        fitnesses[current.fitness] += 1
+
+        if current.repr() not in vectors:
+            vectors[current.repr()] = 0
+        vectors[current.repr()] += 1
 
         if current.fitness > best.fitness:
             best = current
@@ -91,24 +114,27 @@ def dfs(target_vector, operations_list):
             print("operations:\n",
                   "\n".join([f"{x.gate_name}({x.target_qubit}, {x.control_qubits})" for x in best.operations]))
             res = "\n".join([f"{x.gate_name}({x.target_qubit}, {x.control_qubits})" for x in best.operations])
-            file = open("oracle_bfs_3x3_log.txt", "w")  # append mode
+            file = open("oracle_bfs_2x3_log.txt", "w")  # append mode
             file.write(f"\n{best.vector}\n{res}\n{best.fitness}\n")
             file.close()
 
-        if np.array_equal(current.vector, target_vector):
-            return current.vector, current.operations
+        if np.array_equal(state_vector_to_string(current.vector), target_vector):
+            return current
 
         neighbors: [QuantumNode] = []
         for operation in operations_list:
-            neighbors += get_neighbors(target_vector, current.operations, operation)
+            neighbors += get_neighbors(target_vector, current.vector, current.operations, operation)
 
         neighbors.sort(key=lambda x: x.fitness, reverse=True)  # Sort by fitness in descending order
         #print("neighbors:", len(neighbors))
         # Insertion sort to insert neighbors into the list while maintaining sorting order
         for neighbor in neighbors:
-            if neighbor in visited:
+            if neighbor.repr() in visited:
                 continue
-            visited.append(neighbor)
+
+            if neighbor.repr() in [x.repr() for x in nodes_to_explore]:
+                continue
+
             insertion_index = len(nodes_to_explore)
             i = 0
             for node in nodes_to_explore:
@@ -117,9 +143,8 @@ def dfs(target_vector, operations_list):
                     break
                 i += 1
             nodes_to_explore.insert(insertion_index, neighbor)
-        #print("nodes_to_explore:", len(nodes_to_explore))
 
-    return None
+    return best
 
 
 import networkx as nx
@@ -144,11 +169,64 @@ def check_graph_validity(graph):
         return False
 
 
+def test_unitary():
+    qc = QuantumCircuit(9)
+    qc.h(0)
+    qc.z(0)
+    simulator = Aer.get_backend('unitary_simulator')
+    result = simulator.run(transpile(qc, simulator)).result()
+    unitary = result.get_unitary()
+    res = np.ones((2 ** 9, 2 ** 9)) * np.asmatrix(unitary)
+    print(res)
+
+""""
+def get_operations_list(qubits_count):
+    test_unitary()
+
+    unitaries = []
+
+    circuit = QuantumCircuit(qubits_count)
+    circuit.h(range(qubits_count))
+    simulator = Aer.get_backend('unitary_simulator')
+    result = simulator.run(transpile(circuit, simulator)).result()
+    unitary = result.get_unitary()
+    matrix = np.asmatrix(unitary)
+    np.set_printoptions(precision=3)
+    print(matrix)
+
+    for qubit1 in range(qubits_count):
+        qc = QuantumCircuit(qubits_count)
+        qc.z(qubit1)
+        simulator = Aer.get_backend('unitary_simulator')
+        job = assemble(transpile(qc, simulator))
+        result = simulator.run(job).result()
+        unitary = result.get_unitary()
+        unitaries.append(unitary)
+
+    return unitaries
+
+"""
+
+
+def get_base_state_vector(num_qubits):
+    qc = QuantumCircuit(num_qubits)
+    qc.h(range(num_qubits))
+    simulator = Aer.get_backend('statevector_simulator')
+    simulator_result = simulator.run(transpile(qc)).result()
+    simulator_vector: Statevector = simulator_result.get_statevector()
+    return simulator_vector
+
+
 def main():
-    operations = ["Z", "CZ"]
+    # get_operations_list(6)
+    # return
+
+    base_state_vector = get_base_state_vector(6)
+
+    operations = ["Z", "CZ", "CCZ"]
 
     target = ""
-    for i in range(512):
+    for i in range(64):
         # i in binary
         binary = '{:09b}'.format(i)
 
@@ -166,14 +244,18 @@ def main():
         # print(binary, " - is valid? ", valid)
 
     print("target is ", target)
-    result = dfs(target, operations)
+    result = dfs(base_state_vector, target, operations)
     if result is not None:
-        print("result:", result[0])
+        print("fitness is ", result.fitness)
+        print("result:", result.vector)
         print("operations:\n",
-              "\n".join([f"{x.gate_name}({x.target_qubit}, {x.control_qubits})" for x in result[1]]))
+              "\n".join([f"{x.gate_name}({x.target_qubit}, {x.control_qubits})" for x in result.operations]))
     else:
         print("no result")
 
 
 if __name__ == "__main__":
+    import cProfile
     main()
+
+    #cProfile.run('main()')
