@@ -17,6 +17,16 @@ class QuantumGate:
         return f"{self.gate_name}({self.target_qubit}, {self.control_qubits}"
 
 
+class QuantumNode:
+    def __init__(self, vector: str, operations: [QuantumGate], fitness: int):
+        self.vector = vector
+        self.operations = operations
+        self.fitness = fitness
+
+    def __lt__(self, other):
+        return self.fitness < other.fitness
+
+
 def state_vector_to_string(vector: Statevector) -> str:
     return "".join(["+" if x >= 0 else "-" for x in vector.data])
 
@@ -40,41 +50,75 @@ def apply_operations(operations: [QuantumGate]) -> str:
     simulator_vector: Statevector = simulator_result.get_statevector()
     vector_node = state_vector_to_string(simulator_vector)
     return vector_node
+from typing import List
 
 
-def get_neighbor(current_operations, next_operation):
+def get_neighbors(target_vector, current_operations, next_operation) -> List[QuantumNode]:
+    neighbors: [QuantumNode] = []
     if next_operation == "Z":
         for qubit1 in range(9):
             new_operations = current_operations + [QuantumGate("Z", qubit1, [])]
             test_node = apply_operations(new_operations)
-            return test_node, new_operations
+            fitness = sum(c1 == c2 for c1, c2 in zip(test_node, target_vector))
+            neighbors.append(QuantumNode(test_node, new_operations, fitness))
     if next_operation == "CZ":
         for qubit1 in range(9):
             for qubit2 in range(9):
                 if qubit1 != qubit2:
                     new_operations = current_operations + [QuantumGate("CZ", qubit1, [qubit2])]
                     test_node = apply_operations(new_operations)
-                    return test_node, new_operations
+                    fitness = sum(c1 == c2 for c1, c2 in zip(test_node, target_vector))
+                    neighbors.append(QuantumNode(test_node, new_operations, fitness))
+    return neighbors
 
 
-def bfs(target_vector, operations_list):
-    visited = set()
-    start_vector = ""
-    queue = deque([(start_vector, [], 0)])
-    visited.add(tuple(map(tuple, start_vector)))
+def dfs(target_vector, operations_list):
+    count = 0
+    visited: [QuantumNode] = []
+    start_vector: str = "+" * 512
+    best: QuantumNode = QuantumNode(start_vector, [], 0)
+    nodes_to_explore: [QuantumNode] = [best]
+    visited.append(start_vector)
 
-    while queue:
-        current_vector, current_operations, fitness = queue.popleft()
+    while nodes_to_explore:
+        current: QuantumNode = nodes_to_explore.pop()
 
-        if np.array_equal(current_vector, target_vector):
-            return current_vector, current_operations
+        if current.fitness > best.fitness:
+            best = current
+            print("\n\n*** NEW BEST ***")
+            print("best similarity:\n", best.vector, "\n", target_vector)
+            print("value:\n", best.fitness)
+            print("operations:\n",
+                  "\n".join([f"{x.gate_name}({x.target_qubit}, {x.control_qubits})" for x in best.operations]))
+            res = "\n".join([f"{x.gate_name}({x.target_qubit}, {x.control_qubits})" for x in best.operations])
+            file = open("oracle_bfs_3x3_log.txt", "w")  # append mode
+            file.write(f"\n{best.vector}\n{res}\n{best.fitness}\n")
+            file.close()
 
+        if np.array_equal(current.vector, target_vector):
+            return current.vector, current.operations
+
+        neighbors: [QuantumNode] = []
         for operation in operations_list:
-            neighbor, new_operations = get_neighbor(current_operations, operation)
-            if neighbor not in visited:
-                fitness = sum(c1 == c2 for c1, c2 in zip(current_vector, target_vector))
-                queue.append((neighbor, new_operations, fitness))
-                visited.add(neighbor)
+            neighbors += get_neighbors(target_vector, current.operations, operation)
+
+        neighbors.sort(key=lambda x: x.fitness, reverse=True)  # Sort by fitness in descending order
+        #print("neighbors:", len(neighbors))
+        # Insertion sort to insert neighbors into the list while maintaining sorting order
+        for neighbor in neighbors:
+            if neighbor in visited:
+                continue
+            visited.append(neighbor)
+            insertion_index = len(nodes_to_explore)
+            i = 0
+            for node in nodes_to_explore:
+                if neighbor.fitness > node.fitness:
+                    insertion_index = i
+                    break
+                i += 1
+            nodes_to_explore.insert(insertion_index, neighbor)
+        #print("nodes_to_explore:", len(nodes_to_explore))
+
     return None
 
 
@@ -122,7 +166,7 @@ def main():
         # print(binary, " - is valid? ", valid)
 
     print("target is ", target)
-    result = bfs(target, operations)
+    result = dfs(target, operations)
     if result is not None:
         print("result:", result[0])
         print("operations:\n",
