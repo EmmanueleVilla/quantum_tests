@@ -87,10 +87,10 @@ Try to find the oracle with a BFS on an operation list! (oracle_bfs_2.py) - it w
 Upgrade to a 2x2 matrix. It works! NAISU
 
 #### Test 12
-Upgrade to a NxM matrix and check the max size we can reach!
-(also print number of nodes visited etc etc)
-Can we do a % accuracy search instead of pre-calculating everything?
-[TODO]
+Upgrade to a 2x3 matrix. The search works but it takes a long time because of the state vector simulation.
 
 #### Test 13
-Try if we can use this algorithm to find faster oracle from the famous examples....
+Changed from simulator to matrix multiplication. Still a bit slow, but it's better. After only 100 nodes visited with DFS I have an oracle with 56/64 accuracy
+
+#### Test 14
+We should try to implement it in c++ since matrix multiplication takes a veeery long time in python

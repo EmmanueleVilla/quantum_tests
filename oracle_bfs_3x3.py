@@ -14,7 +14,7 @@ class QuantumGate:
         self.target_qubit = target_qubit
         self.control_qubits = control_qubits
 
-    def repr(self):
+    def to_string(self):
         return f"{self.gate_name}({self.target_qubit}, {self.control_qubits})"
 
 
@@ -23,9 +23,7 @@ class QuantumNode:
         self.vector = vector
         self.operations = operations
         self.fitness = fitness
-
-    def repr(self):
-        return state_vector_to_string(self.vector)
+        self.repr = state_vector_to_string(vector)
 
     def __lt__(self, other):
         return self.fitness < other.fitness
@@ -34,29 +32,31 @@ class QuantumNode:
 def state_vector_to_string(vector: Statevector) -> str:
     return "".join(["+" if x >= 0 else "-" for x in vector.data])
 
+
 from typing import List
 
 
-def get_neighbors(target_vector: str, current_vector: Statevector, current_operations, next_operation) -> List[QuantumNode]:
+def get_neighbors(target_vector: str, current_vector: Statevector, current_operations, next_operation) -> List[
+    QuantumNode]:
     neighbors: [QuantumNode] = []
     if next_operation == "Z":
-        for qubit1 in range(2*3):
+        for qubit1 in range(3 * 3):
             new_operations = current_operations + [QuantumGate("Z", qubit1, [])]
             test_node = current_vector.evolve(ZGate(), qargs=[qubit1])
             fitness = sum(c1 == c2 for c1, c2 in zip(state_vector_to_string(test_node), target_vector))
             neighbors.append(QuantumNode(test_node, new_operations, fitness))
     if next_operation == "CZ":
-        for qubit1 in range(2*3):
-            for qubit2 in range(2*3):
+        for qubit1 in range(3 * 3):
+            for qubit2 in range(3 * 3):
                 if qubit1 != qubit2:
                     new_operations = current_operations + [QuantumGate("CZ", qubit1, [qubit2])]
                     test_node = current_vector.evolve(CZGate(), qargs=[qubit1, qubit2])
                     fitness = sum(c1 == c2 for c1, c2 in zip(state_vector_to_string(test_node), target_vector))
                     neighbors.append(QuantumNode(test_node, new_operations, fitness))
     if next_operation == "CCZ":
-        for qubit1 in range(2*3):
-            for qubit2 in range(2*3):
-                for qubit3 in range(2*3):
+        for qubit1 in range(3 * 3):
+            for qubit2 in range(3 * 3):
+                for qubit3 in range(3 * 3):
                     if qubit1 != qubit2 and qubit1 != qubit3 and qubit2 != qubit3:
                         new_operations = current_operations + [QuantumGate("CCZ", qubit1, [qubit2, qubit3])]
                         test_node = current_vector.evolve(CCZGate(), qargs=[qubit1, qubit2, qubit3])
@@ -66,56 +66,31 @@ def get_neighbors(target_vector: str, current_vector: Statevector, current_opera
 
 
 def dfs(base_state_vector, target_vector, operations_list):
-    count = 0
     visited: [str] = []
     best: QuantumNode = QuantumNode(base_state_vector, [], 0)
     nodes_to_explore: [QuantumNode] = [best]
-    times = []
-    nodes = []
-    fitnesses = {}
-    vectors = {}
-
-    start = int(time.time())
+    start = time.time()
 
     while nodes_to_explore:
         current: QuantumNode = nodes_to_explore.pop(0)
-
-        if current in visited:
+        # print(time.time() - start)
+        # start = time.time()
+        if current.repr in visited:
             continue
 
-        visited.append(current.repr())
-        if len(visited) % 100 == 0:
+        if current.fitness > best.fitness:
+            best = current
+
+        visited.append(current.repr)
+
+        if len(visited) % 50 == 0:
             print("-------------")
             print("visited:", len(visited))
             print("queued:", len(nodes_to_explore))
             print("best:", best.fitness)
-            print("ops:", [x.repr() for x in current.operations])
-            print("fitnesses:", fitnesses)
-            print("vectors:", vectors)
-            times.append(int(time.time()) - start)
-            nodes.append(len(visited))
-            file = open("oracle_bfs_3x2_log_times_evolution_fixed.txt", "w")
-            file.write(f"\ntimes={times}\nnodes={nodes}\nfitnesses={fitnesses}\n")
-            file.close()
-
-        if current.fitness not in fitnesses:
-            fitnesses[current.fitness] = 0
-        fitnesses[current.fitness] += 1
-
-        if current.repr() not in vectors:
-            vectors[current.repr()] = 0
-        vectors[current.repr()] += 1
-
-        if current.fitness > best.fitness:
-            best = current
-            print("\n\n*** NEW BEST ***")
-            print("best similarity:\n", best.vector, "\n", target_vector)
-            print("value:\n", best.fitness)
-            print("operations:\n",
-                  "\n".join([f"{x.gate_name}({x.target_qubit}, {x.control_qubits})" for x in best.operations]))
-            res = "\n".join([f"{x.gate_name}({x.target_qubit}, {x.control_qubits})" for x in best.operations])
-            file = open("oracle_bfs_2x3_log.txt", "w")  # append mode
-            file.write(f"\n{best.vector}\n{res}\n{best.fitness}\n")
+            print("ops:", [x.to_string() for x in best.operations])
+            file = open("oracle_dfs_3x3_night.txt", "w")
+            file.write(f"best_fitness={best.fitness}\nops={[x.to_string() for x in best.operations]}\n")
             file.close()
 
         if np.array_equal(state_vector_to_string(current.vector), target_vector):
@@ -125,14 +100,16 @@ def dfs(base_state_vector, target_vector, operations_list):
         for operation in operations_list:
             neighbors += get_neighbors(target_vector, current.vector, current.operations, operation)
 
+        # print(len(neighbors))
+
         neighbors.sort(key=lambda x: x.fitness, reverse=True)  # Sort by fitness in descending order
-        #print("neighbors:", len(neighbors))
+        # print("neighbors:", len(neighbors))
         # Insertion sort to insert neighbors into the list while maintaining sorting order
         for neighbor in neighbors:
-            if neighbor.repr() in visited:
+            if neighbor.repr in visited:
                 continue
 
-            if neighbor.repr() in [x.repr() for x in nodes_to_explore]:
+            if neighbor.repr in [x.repr for x in nodes_to_explore]:
                 continue
 
             insertion_index = len(nodes_to_explore)
@@ -179,6 +156,7 @@ def test_unitary():
     res = np.ones((2 ** 9, 2 ** 9)) * np.asmatrix(unitary)
     print(res)
 
+
 """"
 def get_operations_list(qubits_count):
     test_unitary()
@@ -221,12 +199,12 @@ def main():
     # get_operations_list(6)
     # return
 
-    base_state_vector = get_base_state_vector(6)
+    base_state_vector = get_base_state_vector(9)
 
     operations = ["Z", "CZ", "CCZ"]
 
     target = ""
-    for i in range(64):
+    for i in range(512):
         # i in binary
         binary = '{:09b}'.format(i)
 
@@ -256,6 +234,7 @@ def main():
 
 if __name__ == "__main__":
     import cProfile
+
     main()
 
-    #cProfile.run('main()')
+    # cProfile.run('main()')
