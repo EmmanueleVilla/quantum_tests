@@ -13,7 +13,7 @@ var startingPhase = new int[target.Length];
 Array.Fill(startingPhase, 1);
 Console.WriteLine("Starting phases: " + String.Join(", ", startingPhase));
 
-var operations = (new Operations3x3().GetQuantumGates()).Concat(new AdditionalOperations3x3().GetQuantumGates());
+var operations = (new Operations3x3().GetQuantumGates()).Concat(new AdditionalOperations3x3().GetQuantumGates()).Concat(new AnotherAdditional3x3().GetQuantumGates()); ;
 
 var visited = new HashSet<String>();
 var best = new QuantumNode(startingPhase, new QuantumGate("", startingPhase), 0, phaseToString(startingPhase));
@@ -24,33 +24,28 @@ var nodes_checked = 0;
 var exploded = 0;
 while(frontier.Count > 0)
 {
-    if(frontier.Count > 15000)
+    if(frontier.Count > 10000)
     {
         var temp = new SortedList<int, QuantumNode>(new DuplicateKeyComparer<int>());
-        for(int i=0; i< 10000; i++)
+        for(int i=0; i< 5000; i++)
         {
             temp.Add(frontier.GetKeyAtIndex(i), frontier.GetValueAtIndex(i));
         }
         frontier = temp;
+
+        GC.Collect();
+
+        Console.WriteLine("nodes exploded: " + exploded);
+        Console.WriteLine("nodes checked: " + nodes_checked);
+        Console.WriteLine("nodes queued: " + frontier.Count);
+        Console.WriteLine(best.fitness + "\n\n" + best.operation);
+        Console.WriteLine("\n\n");
+
     }
     var current = frontier.GetValueAtIndex(0);
     frontier.RemoveAt(0);
     exploded++;
 
-    if (exploded % 5000 == 0)
-    {
-        Console.WriteLine("nodes exploded: " + exploded);
-        Console.WriteLine("nodes checked: " + nodes_checked);
-        Console.WriteLine("nodes queued: " + frontier.Count);
-        Console.WriteLine("\n\n");
-    }
-
-    if(current.fitness == 512)
-    {
-        File.WriteAllText("log.txt", current.fitness + "\n" + current.operation);
-        Console.WriteLine("END OK\n" + String.Join("\n", current.operation));
-        break;
-    }
 
     foreach(QuantumGate operation in operations)
     {
@@ -81,13 +76,11 @@ while(frontier.Count > 0)
             maxFitness = fitness;
             Console.WriteLine("\t>new fitness: " + maxFitness);
             Console.WriteLine("\n\n");
-            File.WriteAllText("log.txt", neighbor.fitness + "\n" + neighbor.operation);
+            File.AppendAllText("log_night.txt", neighbor.fitness + "\n" + neighbor.operation);
         }
 
         if (neighbor.fitness == 512)
         {
-            File.WriteAllText("log.txt", neighbor.fitness + "\n" + neighbor.operation);
-            Console.WriteLine("END OK\n" + neighbor.operation);
             break;
         }
     }

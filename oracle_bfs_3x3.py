@@ -94,6 +94,18 @@ def get_neighbors(target_vector: str, current_vector: Statevector, current_opera
                         print(f"list.Add(new QuantumGate(\"{new_operations[-1].pretty()}\", new[] {arr}));")
                         fitness = sum(c1 == c2 for c1, c2 in zip(state_vector_to_string(test_node), target_vector))
                         neighbors.append(QuantumNode(test_node, new_operations, fitness))
+    if next_operation == "ICCZM":
+        for qubit1 in range(3 * 3):
+            for qubit2 in range(3 * 3):
+                for qubit3 in range(3 * 3):
+                    if qubit1 != qubit2 and qubit1 != qubit3 and qubit2 != qubit3:
+                        new_operations = current_operations + [QuantumGate("ICCZM", qubit1, [qubit2, qubit3])]
+                        test_node = current_vector.evolve(CCZGate(ctrl_state="01"), qargs=[qubit1, qubit2, qubit3])
+                        arr = f"{state_vector_to_coefficient(test_node)}"
+                        arr = arr.replace("[", "{").replace("]", "}")
+                        print(f"list.Add(new QuantumGate(\"{new_operations[-1].pretty()}\", new[] {arr}));")
+                        fitness = sum(c1 == c2 for c1, c2 in zip(state_vector_to_string(test_node), target_vector))
+                        neighbors.append(QuantumNode(test_node, new_operations, fitness))
 
     return neighbors
 
@@ -235,7 +247,7 @@ def main():
 
     base_state_vector = get_base_state_vector(9)
 
-    operations = ["Z", "CZ", "CCZ", "ICCZ"]
+    operations = ["Z", "CZ", "CCZ", "ICCZ", "ICCZM"]
 
     target = ""
     for i in range(512):
