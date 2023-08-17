@@ -93,4 +93,8 @@ Upgrade to a 2x3 matrix. The search works but it takes a long time because of th
 Changed from simulator to matrix multiplication. Still a bit slow, but it's better. After only 100 nodes visited with DFS I have an oracle with 56/64 accuracy
 
 #### Test 14
-We should try to implement it in c++ since matrix multiplication takes a veeery long time in python
+Tried in c# with a 3x3 matrix. I reached instantly a 430/512 accuracy, but it needs to know the data...
+
+#### Test 15 (pattern_reduction.py)
+I've found a pattern to check that the active nodes are connected to an active node. But the pattern is very big. (7 ancilla qubits per each vertex!)
+We can try to reduce the ancilla qubits needed with the same search approach. Then we can apply it without calculating anything in advance!

@@ -13,7 +13,10 @@ var startingPhase = new int[target.Length];
 Array.Fill(startingPhase, 1);
 Console.WriteLine("Starting phases: " + String.Join(", ", startingPhase));
 
-var operations = (new Operations3x3().GetQuantumGates()).Concat(new AdditionalOperations3x3().GetQuantumGates()).Concat(new AnotherAdditional3x3().GetQuantumGates()); ;
+var operations = new Operations3x3().GetQuantumGates()
+    .Concat(new AdditionalOperations3x3().GetQuantumGates())
+    .Concat(new AnotherAdditional3x3().GetQuantumGates())
+    .Concat(new YetAnotherAdditional3x3().GetQuantumGates());
 
 var visited = new HashSet<String>();
 var best = new QuantumNode(startingPhase, new QuantumGate("", startingPhase), 0, phaseToString(startingPhase));
@@ -22,6 +25,7 @@ frontier.Add(0, best);
 var maxFitness = 0;
 var nodes_checked = 0;
 var exploded = 0;
+var ops = 0;
 while(frontier.Count > 0)
 {
     if(frontier.Count > 10000)
@@ -41,7 +45,7 @@ while(frontier.Count > 0)
     exploded++;
 
 
-    foreach(QuantumGate operation in operations)
+    foreach (QuantumGate operation in operations)
     {
         var newPhase = applyGate(current.phase, operation);
         var stringedPhase = phaseToString(newPhase);
