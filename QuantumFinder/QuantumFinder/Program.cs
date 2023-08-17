@@ -34,14 +34,8 @@ while(frontier.Count > 0)
         frontier = temp;
 
         GC.Collect();
-
-        Console.WriteLine("nodes exploded: " + exploded);
-        Console.WriteLine("nodes checked: " + nodes_checked);
-        Console.WriteLine("nodes queued: " + frontier.Count);
-        Console.WriteLine(best.fitness + "\n\n" + best.operation);
-        Console.WriteLine("\n\n");
-
     }
+
     var current = frontier.GetValueAtIndex(0);
     frontier.RemoveAt(0);
     exploded++;
@@ -71,10 +65,24 @@ while(frontier.Count > 0)
         frontier.Add(fitness, neighbor);
         nodes_checked++;
 
+        if (nodes_checked % 50000 == 0)
+        {
+            Console.WriteLine("nodes exploded: " + exploded);
+            Console.WriteLine("nodes checked: " + nodes_checked);
+            Console.WriteLine("nodes queued: " + frontier.Count);
+            Console.WriteLine(best.fitness + "\n\n" + best.operation);
+            Console.WriteLine("\n\n");
+        }
+
         if (neighbor.fitness > maxFitness)
         {
+            best = neighbor;
             maxFitness = fitness;
-            Console.WriteLine("\t>new fitness: " + maxFitness);
+            Console.WriteLine("nodes exploded: " + exploded);
+            Console.WriteLine("nodes checked: " + nodes_checked);
+            Console.WriteLine("nodes queued: " + frontier.Count);
+            Console.WriteLine(best.fitness + "\n\n" + best.operation);
+            Console.WriteLine("\n\n");
             Console.WriteLine("\n\n");
             File.AppendAllText("log_night.txt", neighbor.fitness + "\n" + neighbor.operation);
         }
