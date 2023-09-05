@@ -110,7 +110,7 @@ for i in range(9):
         current = edges.pop(0)
         done.append(current)
         if i != current[1] and current[1] not in hadamards:
-            qc.cry(np.pi/divider, current[0], current[1]).c_if(first_measures[i], 0).c_if(second_measures[i], 1)
+            qc.cry(np.pi / divider, current[0], current[1]).c_if(first_measures[i], 0).c_if(second_measures[i], 1)
             divider += 0.05
             hadamards.append(current[1])
             additional_edges = [e for e in undirected_edges if e[0] == current[1]]
@@ -141,9 +141,60 @@ print(normalized_vector)
 
 qc = QuantumCircuit(9)
 qc.initialize(normalized_vector, range(9))
-qc = transpile(qc, basis_gates=["u3","u2","u1","cx","id","u0","u","p","x","y","z","h","s","sdg","t","tdg","rx","ry","rz","sx","sxdg","cz","cy","swap","ch","ccx","cswap","crx","cry","crz","cu1","cp","cu3","csx","cu","rxx","rzz","rccx","rc3x","c3x","c3sqrtx","c4x"])
+qc = transpile(qc,
+               basis_gates=["u3", "u2", "u1", "cx", "id", "u0", "u", "p", "x", "y", "z", "h", "s", "sdg", "t", "tdg",
+                            "rx", "ry", "rz", "sx", "sxdg", "cz", "cy", "swap", "ch", "ccx", "cswap", "crx", "cry",
+                            "crz", "cu1", "cp", "cu3", "csx", "cu", "rxx", "rzz", "rccx", "rc3x", "c3x", "c3sqrtx",
+                            "c4x"])
 print(qc.draw("text"))
-qc.measure_all()
-run(qc)
+
 
 # symmetric state yeeeee
+
+
+stat_prep = qc.to_instruction()
+inv_stat_prep = qc.inverse().to_instruction()
+
+qc = QuantumCircuit(10, 9)
+
+qc.barrier(label="State preparation")
+qc.append(stat_prep, range(9))
+
+qc.barrier(label="Oracle preparation")
+qc.x(9)
+qc.h(9)
+
+qc.barrier(label="Oracle")
+# oracle
+qc.ccx(7, 8, 9)
+
+qc.barrier(label="Diffusion")
+
+# state preparation + x
+qc.append(stat_prep, range(9))
+qc.x(range(9))
+
+qc.barrier()
+
+# Multi-controlled Z
+qc.h(8)
+qc.mct(list(range(8)), 8)
+qc.h(8)
+
+qc.barrier()
+
+# x + state preparation
+qc.x(range(9))
+qc.append(inv_stat_prep, range(9))
+
+qc.measure(range(9), range(9))
+
+print("------------------")
+print(qc.draw("text"))
+
+sim = Aer.get_backend('qasm_simulator')
+job = execute(qc, sim, shots=1000)
+result = job.result()
+counts = result.get_counts(qc)
+count_results(counts)
+
