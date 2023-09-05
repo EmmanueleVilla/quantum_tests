@@ -2,7 +2,7 @@ import math
 
 import networkx as nx
 import numpy as np
-from qiskit import QuantumRegister, ClassicalRegister, QuantumCircuit, Aer, execute
+from qiskit import QuantumRegister, ClassicalRegister, QuantumCircuit, Aer, execute, transpile
 from qiskit.visualization import circuit_drawer, plot_histogram
 
 
@@ -121,5 +121,29 @@ for i in range(9):
 image = circuit_drawer(qc, output='mpl')
 image.savefig('circuit_image.png')
 
-qc.measure(graph_qubits, third_measures)
+statevector_sim = Aer.get_backend('statevector_simulator')
+job = execute(qc, statevector_sim)
+result = job.result()
+outputstate = result.get_statevector(qc, decimals=3)
+print(outputstate)
+
+count_non_zero = sum(1 for element in outputstate if element != 0)
+print("Non zero elements: " + str(count_non_zero))
+print("Tot values: " + str(len(outputstate)))
+
+ones_state = [1 if element != 0 else 0 for element in outputstate]
+print(ones_state)
+count_non_zero = sum(1 for element in ones_state if element != 0)
+print("Non zero elements: " + str(count_non_zero))
+
+normalized_vector = np.asarray(ones_state) / np.linalg.norm(ones_state)
+print(normalized_vector)
+
+qc = QuantumCircuit(9)
+qc.initialize(normalized_vector, range(9))
+qc = transpile(qc, basis_gates=["u3","u2","u1","cx","id","u0","u","p","x","y","z","h","s","sdg","t","tdg","rx","ry","rz","sx","sxdg","cz","cy","swap","ch","ccx","cswap","crx","cry","crz","cu1","cp","cu3","csx","cu","rxx","rzz","rccx","rc3x","c3x","c3sqrtx","c4x"])
+print(qc.draw("text"))
+qc.measure_all()
 run(qc)
+
+# symmetric state yeeeee
