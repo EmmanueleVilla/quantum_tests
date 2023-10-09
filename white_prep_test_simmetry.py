@@ -149,13 +149,29 @@ qc = transpile(qc,
 print(qc.draw("text"))
 
 
-# symmetric state yeeeee
+def cnz(qc, num_control, node, anc):
+    """Construct a multi-controlled Z gate
 
+    Args:
+    num_control :  number of control qubits of cnz gate
+    node :             node qubits
+    anc :               ancillaly qubits
+    """
+    qc.ccx(node[0], node[1], anc[0])
+    for i in range(num_control - 2):
+        qc.ccx(node[i + 2], anc[i], anc[i + 1])
+    qc.cz(anc[num_control - 2], node[num_control])
+    for i in range(num_control - 2)[::-1]:
+        qc.ccx(node[i + 2], anc[i], anc[i + 1])
+    qc.ccx(node[0], node[1], anc[0])
+
+
+# symmetric state yeeeee
 
 stat_prep = qc.to_instruction()
 inv_stat_prep = qc.inverse().to_instruction()
 
-qc = QuantumCircuit(10, 9)
+qc = QuantumCircuit(9 + 1 + 7, 9)
 
 qc.barrier(label="State preparation")
 qc.append(stat_prep, range(9))
@@ -164,37 +180,40 @@ qc.barrier(label="Oracle preparation")
 qc.x(9)
 qc.h(9)
 
-qc.barrier(label="Oracle")
-# oracle
-qc.ccx(7, 8, 9)
+for i in range(1):
+    qc.barrier(label="Oracle")
+    # oracle
+    qc.ccx(7, 8, 9)
 
-qc.barrier(label="Diffusion")
+    qc.barrier(label="Diffusion")
 
-# state preparation + x
-qc.append(stat_prep, range(9))
-qc.x(range(9))
+    # state preparation + x
+    qc.append(inv_stat_prep, range(9))
+    qc.x(range(9))
 
-qc.barrier()
+    qc.barrier()
 
-# Multi-controlled Z
-qc.h(8)
-qc.mct(list(range(8)), 8)
-qc.h(8)
+    # Multi-controlled Z
+    qc.h(8)
+    qc.mct(list(range(8)), 8)
+    qc.h(8)
 
-qc.barrier()
+    qc.barrier()
 
-# x + state preparation
-qc.x(range(9))
-qc.append(inv_stat_prep, range(9))
+    # x + state preparation
+    qc.x(range(9))
+    qc.append(stat_prep, range(9))
 
 qc.measure(range(9), range(9))
 
 print("------------------")
 print(qc.draw("text"))
 
+image = circuit_drawer(qc, output='mpl')
+image.savefig('circuit_image_2.png')
+
 sim = Aer.get_backend('qasm_simulator')
 job = execute(qc, sim, shots=1000)
 result = job.result()
 counts = result.get_counts(qc)
 count_results(counts)
-
