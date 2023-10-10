@@ -171,10 +171,15 @@ def cnz(qc, num_control, node, anc):
 stat_prep = qc.to_instruction()
 inv_stat_prep = qc.inverse().to_instruction()
 
-qc = QuantumCircuit(9 + 1 + 7, 9)
+graph = QuantumRegister(9, 'graph')
+oracle = QuantumRegister(1, 'oracle')
+anc = QuantumRegister(7, 'anc')
+c = ClassicalRegister(9, 'c')
+
+qc = QuantumCircuit(graph, oracle, anc, c)
 
 qc.barrier(label="State preparation")
-qc.append(stat_prep, range(9))
+qc.append(stat_prep, graph)
 
 qc.barrier(label="Oracle preparation")
 qc.x(9)
