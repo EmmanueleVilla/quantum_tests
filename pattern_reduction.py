@@ -3,8 +3,10 @@ import io
 import json
 from collections import deque
 
+from matplotlib import pyplot as plt
 from qiskit import QuantumRegister, ClassicalRegister, QuantumCircuit, Aer, execute
 from qiskit.circuit import qpy_serialization
+from qiskit.visualization import circuit_drawer
 
 
 def get_neighbors(circ):
@@ -98,10 +100,46 @@ def main():
     result = job.result()
 
     print(qc.draw("text"))
+    expected = sorted(result.get_counts(qc).keys())
 
-    expected = result.get_counts(qc).keys()
+    nodes = QuantumRegister(5, "node")
+    final_ancilla = QuantumRegister(1, "final")
+    node_measurement = ClassicalRegister(5, "measure")
+    result_measurement = ClassicalRegister(1, "result_measure")
+
+    qc2 = QuantumCircuit(nodes, final_ancilla, node_measurement, result_measurement)
+    qc2.h(range(5))
+    qc2.barrier()
+    qc2.x(range(1, 5))
+    qc2.mcx([1, 2, 3, 4], 5)
+    qc2.x(range(1, 5))
+    qc2.barrier()
+    qc2.x(5)
+    qc2.barrier()
+    qc2.x(0)
+    qc2.cx(0, 5)
+    qc2.x(0)
+    qc2.barrier()
+    qc2.measure(nodes, node_measurement)
+    qc2.measure(final_ancilla, result_measurement)
+    print(qc2.draw("text"))
     print(expected)
+    job = execute(qc2, simulator, shots=1000)
+    result = job.result()
+    expected2 = sorted(result.get_counts(qc2).keys())
+    print(expected2)
+    print(expected == expected2)
 
+    # Disegna il circuito utilizzando Matplotlib
+    fig, ax = plt.subplots()
+    circuit_drawer(qc2, output='mpl', ax=ax)
+    ax.axis('on')  # Mantieni gli assi visibili
+
+    plt.savefig('advanced_oracle.png', dpi=300)
+
+
+
+"""
     base_qc = QuantumCircuit(nodes, final_ancilla, result_measurement, node_measurement)
     base_qc.h(nodes)
 
@@ -133,7 +171,7 @@ def main():
             if circ_to_key(neighbor) not in visited:
                 queue.append(neighbor)
                 visited.add(circ_to_key(neighbor))
-
+"""
 
 if __name__ == "__main__":
     main()

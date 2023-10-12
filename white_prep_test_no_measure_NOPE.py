@@ -87,7 +87,7 @@ for i in range(9):
         current = edges.pop(0)
         done.append(current)
         if i != current[1] and current[1] not in hadamards:
-            qc.ch(current[0], current[1])#.c_if(first_measures[i], 0).c_if(second_measures[i], 1)
+            qc.ch(current[0], current[1]).c_if(first_measures[i], 0).c_if(second_measures[i], 1)
             hadamards.append(current[1])
             additional_edges = [e for e in undirected_edges if e[0] == current[1]]
             for e in additional_edges:

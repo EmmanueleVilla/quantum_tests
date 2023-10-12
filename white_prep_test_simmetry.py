@@ -13,6 +13,15 @@ def control_rotation(qc, control, target, theta):
     qc.u(-theta_dash, 0, 0, target)
     return qc
 
+def print_results(results):
+    for res in results:
+        print_graph(res)
+
+
+def print_graph(g):
+    last = g.split(' ')[0]
+    g = np.reshape([char for char in last], (3, 3))
+    print_dungeon(g)
 
 def wn(circuit, n):
     for i in range(n):
@@ -50,18 +59,6 @@ def count_results(results):
     print(res)
     histogram = plot_histogram(res, color='midnightblue')
     histogram.savefig('histogram.png')
-
-
-def print_results(results):
-    return
-    for res in results:
-        print_graph(res)
-
-
-def print_graph(graph):
-    last = graph.split(' ')[0]
-    g = np.reshape([char for char in last], (3, 3))
-    print_dungeon(g)
 
 
 def run(circuit):
@@ -124,19 +121,20 @@ image.savefig('circuit_image.png')
 statevector_sim = Aer.get_backend('statevector_simulator')
 job = execute(qc, statevector_sim)
 result = job.result()
-outputstate = result.get_statevector(qc, decimals=3)
+outputstate = result.get_statevector(qc, decimals=5)
 print(outputstate)
 
-count_non_zero = sum(1 for element in outputstate if element != 0)
+count_non_zero = sum(1 for element in outputstate if not np.isclose(element, 0, atol=1e-8, rtol=0))
 print("Non zero elements: " + str(count_non_zero))
 print("Tot values: " + str(len(outputstate)))
 
 ones_state = [1 if element != 0 else 0 for element in outputstate]
 print(ones_state)
-count_non_zero = sum(1 for element in ones_state if element != 0)
+count_non_zero = sum(1 for element in ones_state if not np.isclose(element, 0, atol=1e-8, rtol=0))
 print("Non zero elements: " + str(count_non_zero))
 
 normalized_vector = np.asarray(ones_state) / np.linalg.norm(ones_state)
+
 print(normalized_vector)
 
 qc = QuantumCircuit(9)
@@ -181,6 +179,7 @@ qc = QuantumCircuit(graph, oracle, anc, c)
 qc.barrier(label="State preparation")
 qc.append(stat_prep, graph)
 
+
 qc.barrier(label="Oracle preparation")
 qc.x(9)
 qc.h(9)
@@ -188,7 +187,7 @@ qc.h(9)
 for i in range(1):
     qc.barrier(label="Oracle")
     # oracle
-    qc.ccx(7, 8, 9)
+    qc.cx(8, 9)
 
     qc.barrier(label="Diffusion")
 
@@ -199,9 +198,7 @@ for i in range(1):
     qc.barrier()
 
     # Multi-controlled Z
-    qc.h(8)
-    qc.mct(list(range(8)), 8)
-    qc.h(8)
+    cnz(qc, 7, graph, anc)
 
     qc.barrier()
 
@@ -218,7 +215,15 @@ image = circuit_drawer(qc, output='mpl')
 image.savefig('circuit_image_2.png')
 
 sim = Aer.get_backend('qasm_simulator')
-job = execute(qc, sim, shots=1000)
+job = execute(qc, sim, shots=25000)
 result = job.result()
 counts = result.get_counts(qc)
 count_results(counts)
+
+print_results(counts.keys())
+
+statevector_sim = Aer.get_backend('statevector_simulator')
+job = execute(qc, statevector_sim)
+result = job.result()
+outputstate = result.get_statevector(qc, decimals=5)
+print(outputstate)
