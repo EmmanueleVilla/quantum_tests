@@ -76,3 +76,9 @@ def create_dataset(size, negative_value=-1, m=3, n=4):
     test_features = np.array(test_features)
     test_labels = np.array(test_labels)
     return train_features, train_labels, test_features, test_labels
+
+a,b,c,d = create_dataset(10000, -1, 3, 3)
+print(len(a))
+print(len(b))
+print(len(c))
+print(len(d))

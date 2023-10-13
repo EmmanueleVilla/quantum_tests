@@ -100,4 +100,7 @@ I've found a pattern to check that the active nodes are connected to an active n
 We can try to reduce the ancilla qubits needed with the same search approach. Then we can apply it without calculating anything in advance!
 
 #### Test 16
-White prep testing with multiple measurements (white_prep_test.py)
+White prep testing with multiple measurements (white_prep_test_simmetry.py). This works to achieve a superposition, BUT the state vector is wrong, so we simplify the approach and be back to this if it works
+
+#### Test 17
+Calculate the superposition starting from each vertex in different measurements and then combine them (white_prep_test_simmetry_new_init.py).
