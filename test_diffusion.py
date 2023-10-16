@@ -219,6 +219,9 @@ def cnz(qc, num_control, node, anc):
 
 # symmetric state yeeeee
 
+qc = QuantumCircuit(9)
+qc.h(range(9))
+
 stat_prep = qc.to_instruction()
 inv_stat_prep = qc.inverse().to_instruction()
 

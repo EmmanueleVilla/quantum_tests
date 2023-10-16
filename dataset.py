@@ -31,6 +31,9 @@ def create_dataset(size, negative_value=-1, m=3, n=4):
             n2 = t.number_of_nodes()
 
             if n1 == n2:
+                arr = [new_graph.nodes[node]['label'] for node in new_graph.nodes]
+                if arr == [1,0,1,0,0,1,1,1,0]:
+                    print('here')
                 valid.append(new_graph)
 
             if n1 != n2:

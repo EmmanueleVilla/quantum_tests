@@ -150,48 +150,7 @@ for i in range(512):
 count_ones = np.sum(global_state_vector == 1)
 print(f"Numero di valori uguali a 1 in global_state_vectors: {count_ones}")
 
-exit(1)
-
-qc = wn(qc, 9)
-qc.measure(graph_qubits, second_measures)
-run(qc)
-
-divider = 1.5
-for i in range(1):
-    hadamards = []
-    done = []
-    edges = [edge for edge in undirected_edges if edge[0] == i]
-    while len(edges) > 0:
-        current = edges.pop(0)
-        done.append(current)
-        if i != current[1] and current[1] not in hadamards:
-            qc.cry(np.pi / divider, current[0], current[1]).c_if(first_measures[i], 0).c_if(second_measures[i], 1)
-            divider += 0.05
-            hadamards.append(current[1])
-            additional_edges = [e for e in undirected_edges if e[0] == current[1]]
-            for e in additional_edges:
-                if e not in edges and e not in done:
-                    edges.append(e)
-
-image = circuit_drawer(qc, output='mpl')
-image.savefig('circuit_image.png')
-
-statevector_sim = Aer.get_backend('statevector_simulator')
-job = execute(qc, statevector_sim)
-result = job.result()
-outputstate = result.get_statevector(qc, decimals=5)
-print(outputstate)
-
-count_non_zero = sum(1 for element in outputstate if not np.isclose(element, 0, atol=1e-8, rtol=0))
-print("Non zero elements: " + str(count_non_zero))
-print("Tot values: " + str(len(outputstate)))
-
-ones_state = [1 if element != 0 else 0 for element in outputstate]
-print(ones_state)
-count_non_zero = sum(1 for element in ones_state if not np.isclose(element, 0, atol=1e-8, rtol=0))
-print("Non zero elements: " + str(count_non_zero))
-
-normalized_vector = np.asarray(ones_state) / np.linalg.norm(ones_state)
+normalized_vector = np.asarray(global_state_vector) / np.linalg.norm(global_state_vector)
 
 print(normalized_vector)
 
@@ -230,6 +189,9 @@ def cnz(qc, num_control, node, anc):
 
 
 # symmetric state yeeeee
+
+qc = QuantumCircuit(9)
+qc.h(range(9))
 
 stat_prep = qc.to_instruction()
 inv_stat_prep = qc.inverse().to_instruction()
@@ -291,3 +253,5 @@ job = execute(qc, statevector_sim)
 result = job.result()
 outputstate = result.get_statevector(qc, decimals=5)
 print(outputstate)
+
+print_results([x for x in counts.keys()])
