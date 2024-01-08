@@ -144,8 +144,9 @@ qc = transpile(qc,
                             "rx", "ry", "rz", "sx", "sxdg", "cz", "cy", "swap", "ch", "ccx", "cswap", "crx", "cry",
                             "crz", "cu1", "cp", "cu3", "csx", "cu", "rxx", "rzz", "rccx", "rc3x", "c3x", "c3sqrtx",
                             "c4x"])
-print(qc.draw("text"))
 
+
+exit(1)
 
 def cnz(qc, num_control, node, anc):
     """Construct a multi-controlled Z gate

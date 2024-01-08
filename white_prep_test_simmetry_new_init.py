@@ -156,13 +156,9 @@ print(normalized_vector)
 
 qc = QuantumCircuit(9)
 qc.initialize(normalized_vector, range(9))
-qc = transpile(qc,
-               basis_gates=["u3", "u2", "u1", "cx", "id", "u0", "u", "p", "x", "y", "z", "h", "s", "sdg", "t", "tdg",
-                            "rx", "ry", "rz", "sx", "sxdg", "cz", "cy", "swap", "ch", "ccx", "cswap", "crx", "cry",
-                            "crz", "cu1", "cp", "cu3", "csx", "cu", "rxx", "rzz", "rccx", "rc3x", "c3x", "c3sqrtx",
-                            "c4x"])
-print(qc.draw("text"))
-
+qc = transpile(qc, optimization_level=3)
+print(dict(qc.decompose().decompose().decompose().decompose().count_ops()))
+exit(1)
 
 def cnz(qc, num_control, node, anc):
     """Construct a multi-controlled Z gate
