@@ -1,7 +1,7 @@
 ## Quantum Procedural Content Generation Tests
 
 ### Description
-Welcome to the Quantum Procedural Content Generation Tests repository, where we explore the intriguing realm of generating intricate room layouts for dungeons, empowered by quantum computation techniques.
+This is a collection of tests I did for my master thesis
 
 ### Problem Statement
 The challenge of crafting engaging and diverse procedural content for virtual environments has garnered significant attention. This repository addresses the intricate task of generating room layouts for dungeons. By leveraging the principles of quantum computation, we seek innovative solutions to create dynamic and captivating virtual worlds.
